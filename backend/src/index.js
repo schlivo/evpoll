@@ -83,9 +83,9 @@ app.get('/api/config', (req, res) => {
 const publicPath = join(__dirname, '../public');
 app.use(express.static(publicPath));
 
-// Flyer generator route (serve flyer.html at /flyer)
+// Flyer generator route - redirect to static file
 app.get('/flyer', (req, res) => {
-  res.sendFile(join(publicPath, 'flyer.html'));
+  res.redirect('/flyer.html');
 });
 
 // SPA fallback - serve index.html for all non-API routes
