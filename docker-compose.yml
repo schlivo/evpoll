@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  enquete-irve:
+    build: .
+    image: enquete-irve:latest
+    container_name: enquete-irve
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_PATH=/app/data/survey.db
+    volumes:
+      - irve-data:/app/data
+    networks:
+      - traefik-public
+    deploy:
+      mode: replicated
+      replicas: 1
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.irve.rule=Host(`irve.exemple.fr`)"
+        - "traefik.http.routers.irve.entrypoints=websecure"
+        - "traefik.http.routers.irve.tls.certresolver=letsencrypt"
+        - "traefik.http.services.irve.loadbalancer.server.port=3000"
+        - "traefik.docker.network=traefik-public"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.irve.rule=Host(`irve.exemple.fr`)"
+      - "traefik.http.routers.irve.entrypoints=websecure"
+      - "traefik.http.routers.irve.tls.certresolver=letsencrypt"
+      - "traefik.http.services.irve.loadbalancer.server.port=3000"
+      - "traefik.docker.network=traefik-public"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  irve-data:
+    driver: local
+
+networks:
+  traefik-public:
+    external: true
