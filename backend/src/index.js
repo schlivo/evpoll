@@ -23,7 +23,8 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       imgSrc: ["'self'", "data:", "https://api.qrserver.com"],
       connectSrc: ["'self'"],
