@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import db, { logAuditEvent, getAuditLog, cleanupOldRecords } from '../db.js';
-import { authLimiter } from '../middleware/rateLimiter.js';
+import { authLimiter, rgpdLimiter } from '../middleware/rateLimiter.js';
 import { generateToken, requireAuth, revokeToken, getClientIP, validateToken } from '../middleware/auth.js';
 
 const router = Router();
@@ -191,22 +191,15 @@ export function handleExportCSV(req, res) {
   const authHeader = req.headers.authorization;
   const clientIP = getClientIP(req);
 
-  // Support both old header-based auth (for backward compatibility during transition)
-  // and new Bearer token auth
-  let isAuthorized = false;
-
-  if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.slice(7);
-    isAuthorized = validateToken(token);
-  } else {
-    // Legacy: Check X-Admin-Password header
-    const adminPassword = req.headers['x-admin-password'];
-    // Use sync comparison for legacy support (will be removed)
-    isAuthorized = adminPassword === ADMIN_PASSWORD;
+  // Require Bearer token authentication
+  if (!authHeader?.startsWith('Bearer ')) {
+    logAuditEvent('export_denied', clientIP, { reason: 'missing_token' });
+    return res.status(401).json({ error: 'Non autorisé' });
   }
 
-  if (!isAuthorized) {
-    logAuditEvent('export_denied', clientIP, {});
+  const token = authHeader.slice(7);
+  if (!validateToken(token)) {
+    logAuditEvent('export_denied', clientIP, { reason: 'invalid_token' });
     return res.status(401).json({ error: 'Non autorisé' });
   }
 
@@ -401,7 +394,8 @@ router.delete('/admin/cleanup', requireAuth, (req, res) => {
 // ============================================
 
 // POST /api/stats/rgpd/request - Request data access or deletion
-router.post('/rgpd/request', (req, res) => {
+// Rate limited to prevent email enumeration
+router.post('/rgpd/request', rgpdLimiter, (req, res) => {
   const { email, type } = req.body; // type: 'access' or 'delete'
   const clientIP = getClientIP(req);
 
@@ -451,9 +445,9 @@ router.post('/rgpd/request', (req, res) => {
   }
 });
 
-// GET /api/stats/rgpd/export/:email - Export personal data (simplified for demo)
-// In production, this would require email verification token
-router.get('/rgpd/export/:email', (req, res) => {
+// GET /api/stats/rgpd/export/:email - Export personal data
+// Protected by admin auth - admin handles RGPD requests manually
+router.get('/rgpd/export/:email', requireAuth, (req, res) => {
   const { email } = req.params;
   const clientIP = getClientIP(req);
 
@@ -505,9 +499,9 @@ router.get('/rgpd/export/:email', (req, res) => {
   }
 });
 
-// DELETE /api/stats/rgpd/delete/:email - Delete personal data (simplified for demo)
-// In production, this would require email verification token
-router.delete('/rgpd/delete/:email', (req, res) => {
+// DELETE /api/stats/rgpd/delete/:email - Delete personal data
+// Protected by admin auth - admin handles RGPD requests manually
+router.delete('/rgpd/delete/:email', requireAuth, (req, res) => {
   const { email } = req.params;
   const clientIP = getClientIP(req);
 
@@ -551,7 +545,8 @@ router.delete('/rgpd/delete/:email', (req, res) => {
 });
 
 // POST /api/stats/rgpd/withdraw-consent - Withdraw contact consent
-router.post('/rgpd/withdraw-consent', (req, res) => {
+// Protected by admin auth - admin handles consent withdrawal requests manually
+router.post('/rgpd/withdraw-consent', requireAuth, (req, res) => {
   const { email } = req.body;
   const clientIP = getClientIP(req);
 

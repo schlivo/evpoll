@@ -46,3 +46,18 @@ export const authLimiter = rateLimit({
   },
   skipSuccessfulRequests: true // Don't count successful logins
 });
+
+// RGPD request limit: 3 requests per hour per IP (prevent enumeration)
+export const rgpdLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3,
+  message: {
+    success: false,
+    error: 'Trop de demandes RGPD. Veuillez réessayer plus tard.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+  }
+});
