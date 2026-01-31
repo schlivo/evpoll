@@ -67,10 +67,12 @@ app.get('/api/health', (req, res) => {
 
 // Public config endpoint (non-sensitive configuration for frontend)
 app.get('/api/config', (req, res) => {
+  const COPRO_NAME = process.env.COPRO_NAME || 'Ma Copropriété';
   const BUILDINGS = (process.env.BUILDINGS || 'A,B,C,D').split(',').map(b => b.trim());
   const CONTACT_EMAIL = process.env.CONTACT_EMAIL || 'conseil-syndical@exemple.fr';
   const SYNDIC_EMAIL = process.env.SYNDIC_EMAIL || 'syndic@exemple.fr';
   res.json({
+    copro_name: COPRO_NAME,
     buildings: BUILDINGS,
     contact_email: CONTACT_EMAIL,
     syndic_email: SYNDIC_EMAIL

@@ -37,6 +37,12 @@ const routes = [
     name: 'admin',
     component: () => import('../views/AdminView.vue'),
     meta: { standalone: true }
+  },
+  {
+    path: '/flyer',
+    name: 'flyer',
+    component: () => import('../views/FlyerView.vue'),
+    meta: { standalone: true }
   }
 ]
 
