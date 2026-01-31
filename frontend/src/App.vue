@@ -497,8 +497,9 @@ html, body {
   }
 
   .section-dot {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 12px;
+    border-radius: 9999px;
     border: none;
     background: var(--color-text-muted);
     box-shadow: none;
@@ -509,7 +510,7 @@ html, body {
   .section-dot:hover {
     opacity: 0.9;
     background: var(--color-primary-light);
-    transform: scale(1.15);
+    transform: scale(1.1);
   }
 
   .section-dot.active {
