@@ -1,3 +1,7 @@
+<script setup>
+import SvgIcon from '../components/SvgIcon.vue'
+</script>
+
 <template>
   <div class="page">
     <div class="container">
@@ -84,7 +88,9 @@
 
         <div class="benefits-grid">
           <div class="benefit-item">
-            <div class="benefit-icon">&#128200;</div>
+            <div class="benefit-icon">
+              <SvgIcon name="chart-up" :size="40" />
+            </div>
             <h4>Valorisation du patrimoine</h4>
             <p>
               Un immeuble équipé de bornes est plus attractif
@@ -93,7 +99,9 @@
           </div>
 
           <div class="benefit-item">
-            <div class="benefit-icon">&#128176;</div>
+            <div class="benefit-icon">
+              <SvgIcon name="people" :size="40" />
+            </div>
             <h4>Économies d'échelle</h4>
             <p>
               Une installation collective coûte moins cher par
@@ -102,7 +110,9 @@
           </div>
 
           <div class="benefit-item">
-            <div class="benefit-icon">&#128274;</div>
+            <div class="benefit-icon">
+              <SvgIcon name="hand-help" :size="40" />
+            </div>
             <h4>Aides financières</h4>
             <p>
               Les dispositifs d'aide (ADVENIR, Enedis) sont plus
@@ -111,7 +121,9 @@
           </div>
 
           <div class="benefit-item">
-            <div class="benefit-icon">&#9889;</div>
+            <div class="benefit-icon">
+              <SvgIcon name="bolt" :size="40" />
+            </div>
             <h4>Infrastructure optimisée</h4>
             <p>
               Une solution collective permet de mieux gérer la
@@ -245,8 +257,10 @@
 }
 
 .benefit-icon {
-  font-size: 2.5rem;
+  color: var(--color-primary);
   margin-bottom: 0.75rem;
+  display: flex;
+  justify-content: center;
 }
 
 .benefit-item h4 {

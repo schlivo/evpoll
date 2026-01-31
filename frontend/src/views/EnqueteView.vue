@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, inject } from 'vue'
+import SvgIcon from '../components/SvgIcon.vue'
 
 const closeEnquete = inject('closeEnquete')
 
@@ -115,7 +116,9 @@ const buildings = ['A', 'B', 'C', 'D']
 
       <!-- Success state -->
       <div v-if="isSubmitted" class="success-card fade-in">
-        <div class="success-icon">&#10003;</div>
+        <div class="success-icon">
+          <SvgIcon name="check" :size="40" />
+        </div>
         <h2>Merci pour votre participation !</h2>
         <p>
           Votre réponse a été enregistrée. Elle nous aidera à définir
@@ -663,7 +666,6 @@ const buildings = ['A', 'B', 'C', 'D']
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2.5rem;
   margin: 0 auto 1.5rem;
 }
 

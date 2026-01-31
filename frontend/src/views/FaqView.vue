@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue'
+import SvgIcon from '../components/SvgIcon.vue'
 
 const openItems = ref([])
 
@@ -84,7 +85,9 @@ const faqItems = [
         >
           <button class="accordion-header" @click="toggleItem(index)">
             <span>{{ item.question }}</span>
-            <span class="accordion-icon">&#9660;</span>
+            <span class="accordion-icon">
+              <SvgIcon name="chevron-down" :size="20" />
+            </span>
           </button>
           <div class="accordion-content">
             <p>{{ item.answer }}</p>
@@ -148,9 +151,10 @@ const faqItems = [
 }
 
 .accordion-icon {
-  font-size: 0.75rem;
   color: var(--color-text-muted);
   transition: transform 0.2s;
+  display: flex;
+  align-items: center;
 }
 
 .accordion-item.open .accordion-icon {

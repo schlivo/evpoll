@@ -1,4 +1,6 @@
 <script setup>
+import SvgIcon from './SvgIcon.vue'
+
 defineProps({
   value: {
     type: [Number, String],
@@ -21,7 +23,9 @@ defineProps({
 
 <template>
   <div class="stat-card">
-    <div class="stat-icon" v-if="icon">{{ icon }}</div>
+    <div class="stat-icon" v-if="icon">
+      <SvgIcon :name="icon" :size="32" />
+    </div>
     <div class="stat-value">
       {{ value }}<span class="stat-suffix" v-if="suffix">{{ suffix }}</span>
     </div>
@@ -45,8 +49,10 @@ defineProps({
 }
 
 .stat-icon {
-  font-size: 2rem;
+  color: var(--color-primary);
   margin-bottom: 0.5rem;
+  display: flex;
+  justify-content: center;
 }
 
 .stat-value {

@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue'
+import SvgIcon from '../components/SvgIcon.vue'
 
 const selectedOption = ref(null)
 
@@ -219,7 +220,9 @@ const getRatingBars = (value, max = 5) => {
       <section class="recommendation">
         <h2>Notre recommandation : la colonne Enedis</h2>
         <div class="recommendation-card">
-          <div class="recommendation-icon">&#9889;</div>
+          <div class="recommendation-icon">
+            <SvgIcon name="bolt" :size="40" />
+          </div>
           <div class="recommendation-content">
             <h3>Comment ça marche ?</h3>
             <p>
@@ -263,7 +266,9 @@ const getRatingBars = (value, max = 5) => {
           </div>
 
           <div class="mechanism-card highlight">
-            <div class="mechanism-number">&#10003;</div>
+            <div class="mechanism-number mechanism-check">
+              <SvgIcon name="check" :size="24" />
+            </div>
             <h4>Coût pour la copropriété</h4>
             <p>
               Grâce au refinancement Enedis et aux aides (ADVENIR, prime colonne), le coût résiduel
@@ -277,7 +282,9 @@ const getRatingBars = (value, max = 5) => {
       <section class="participation-importance">
         <h2>Pourquoi votre participation compte</h2>
         <div class="importance-card">
-          <div class="importance-icon">&#128200;</div>
+          <div class="importance-icon">
+            <SvgIcon name="chart-up" :size="40" />
+          </div>
           <div class="importance-content">
             <h3>Plus on est nombreux, plus le projet avance !</h3>
             <p>
@@ -503,8 +510,10 @@ tr.recommended:hover {
 }
 
 .recommendation-icon {
-  font-size: 3rem;
+  color: var(--color-primary);
   flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
 }
 
 .recommendation-content h3 {
@@ -566,7 +575,10 @@ tr.recommended:hover {
 
 .mechanism-card.highlight .mechanism-number {
   background: var(--color-primary-dark);
-  font-size: 1.25rem;
+}
+
+.mechanism-number.mechanism-check {
+  font-size: 1rem;
 }
 
 .mechanism-card h4 {
@@ -599,8 +611,10 @@ tr.recommended:hover {
 }
 
 .importance-icon {
-  font-size: 3rem;
+  color: var(--color-secondary);
   flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
 }
 
 .importance-content h3 {

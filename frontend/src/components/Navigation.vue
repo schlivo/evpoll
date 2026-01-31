@@ -1,21 +1,21 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import SvgIcon from './SvgIcon.vue'
 
 const route = useRoute()
 const mobileMenuOpen = ref(false)
 
 const navLinks = [
-  { path: '/', label: 'Accueil', icon: '&#127968;' },
-  { path: '/comprendre', label: 'Comprendre', icon: '&#128161;' },
-  { path: '/options', label: 'Options', icon: '&#9889;' },
-  { path: '/aides', label: 'Aides', icon: '&#128176;' },
-  { path: '/faq', label: 'FAQ', icon: '&#10067;' },
+  { path: '/', label: 'Accueil', icon: 'home' },
+  { path: '/comprendre', label: 'Comprendre', icon: 'lightbulb' },
+  { path: '/options', label: 'Options', icon: 'bolt' },
+  { path: '/aides', label: 'Aides', icon: 'euro' },
+  { path: '/faq', label: 'FAQ', icon: 'help' },
 ]
 
 const toggleMobileMenu = () => {
   mobileMenuOpen.value = !mobileMenuOpen.value
-  // Prevent body scroll when menu is open
   document.body.style.overflow = mobileMenuOpen.value ? 'hidden' : ''
 }
 
@@ -24,7 +24,6 @@ const closeMobileMenu = () => {
   document.body.style.overflow = ''
 }
 
-// Close menu on route change
 watch(() => route.path, () => {
   closeMobileMenu()
 })
@@ -35,7 +34,9 @@ watch(() => route.path, () => {
     <div class="container">
       <nav class="nav">
         <router-link to="/" class="logo" @click="closeMobileMenu">
-          <span class="logo-icon">&#9889;</span>
+          <span class="logo-icon">
+            <SvgIcon name="bolt" :size="24" />
+          </span>
           <span class="logo-text">IRVE Copropriété</span>
         </router-link>
 
@@ -48,7 +49,6 @@ watch(() => route.path, () => {
           <span class="hamburger" :class="{ open: mobileMenuOpen }"></span>
         </button>
 
-        <!-- Desktop navigation -->
         <div class="nav-links-desktop">
           <router-link
             v-for="link in navLinks"
@@ -65,7 +65,6 @@ watch(() => route.path, () => {
       </nav>
     </div>
 
-    <!-- Mobile fullscreen menu -->
     <Transition name="overlay">
       <div v-if="mobileMenuOpen" class="mobile-overlay" @click="closeMobileMenu"></div>
     </Transition>
@@ -83,9 +82,13 @@ watch(() => route.path, () => {
               :style="{ '--delay': index * 0.05 + 's' }"
               @click="closeMobileMenu"
             >
-              <span class="mobile-nav-icon" v-html="link.icon"></span>
+              <span class="mobile-nav-icon">
+                <SvgIcon :name="link.icon" :size="24" />
+              </span>
               <span class="mobile-nav-label">{{ link.label }}</span>
-              <span class="mobile-nav-arrow">&#8250;</span>
+              <span class="mobile-nav-arrow">
+                <SvgIcon name="chevron-right" :size="20" />
+              </span>
             </router-link>
           </TransitionGroup>
 
@@ -95,7 +98,9 @@ watch(() => route.path, () => {
               class="mobile-cta"
               @click="closeMobileMenu"
             >
-              <span class="mobile-cta-icon">&#128203;</span>
+              <span class="mobile-cta-icon">
+                <SvgIcon name="clipboard" :size="24" />
+              </span>
               <span>Participer à l'enquête</span>
             </router-link>
             <p class="mobile-cta-hint">Chaque réponse compte !</p>
@@ -141,7 +146,9 @@ watch(() => route.path, () => {
 }
 
 .logo-icon {
-  font-size: 1.5rem;
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
 }
 
 .mobile-toggle {
@@ -200,12 +207,10 @@ watch(() => route.path, () => {
   transform: rotate(-45deg);
 }
 
-/* Desktop nav - hidden on mobile */
 .nav-links-desktop {
   display: none;
 }
 
-/* Mobile overlay */
 .mobile-overlay {
   position: fixed;
   inset: 0;
@@ -224,7 +229,6 @@ watch(() => route.path, () => {
   opacity: 0;
 }
 
-/* Mobile menu */
 .mobile-menu {
   position: fixed;
   top: 64px;
@@ -289,7 +293,6 @@ watch(() => route.path, () => {
 }
 
 .mobile-nav-icon {
-  font-size: 1.5rem;
   width: 40px;
   height: 40px;
   display: flex;
@@ -297,6 +300,7 @@ watch(() => route.path, () => {
   justify-content: center;
   background: var(--color-bg-alt);
   border-radius: var(--radius);
+  color: var(--color-text-light);
 }
 
 .mobile-nav-item.active .mobile-nav-icon {
@@ -311,9 +315,10 @@ watch(() => route.path, () => {
 }
 
 .mobile-nav-arrow {
-  font-size: 1.5rem;
   color: var(--color-text-muted);
   transition: transform 0.2s;
+  display: flex;
+  align-items: center;
 }
 
 .mobile-nav-item:hover .mobile-nav-arrow {
@@ -321,7 +326,6 @@ watch(() => route.path, () => {
   color: var(--color-primary);
 }
 
-/* Mobile CTA */
 .mobile-cta-wrapper {
   margin-top: 2rem;
   text-align: center;
@@ -352,7 +356,8 @@ watch(() => route.path, () => {
 }
 
 .mobile-cta-icon {
-  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
 }
 
 .mobile-cta-hint {
@@ -361,7 +366,6 @@ watch(() => route.path, () => {
   color: var(--color-text-muted);
 }
 
-/* Stagger animation */
 @keyframes slideDown {
   from {
     opacity: 0;
@@ -378,7 +382,6 @@ watch(() => route.path, () => {
   animation-delay: var(--delay);
 }
 
-/* Desktop styles */
 @media (min-width: 768px) {
   .mobile-toggle {
     display: none;

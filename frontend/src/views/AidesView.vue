@@ -1,3 +1,7 @@
+<script setup>
+import SvgIcon from '../components/SvgIcon.vue'
+</script>
+
 <template>
   <div class="page">
     <div class="container">
@@ -11,7 +15,9 @@
 
       <section class="main-principle">
         <div class="principle-card">
-          <div class="principle-icon">&#127970;</div>
+          <div class="principle-icon enedis-logo">
+              <SvgIcon name="enedis" :size="48" />
+            </div>
           <div class="principle-content">
             <h2>Enedis préfinance l'infrastructure</h2>
             <p>
@@ -131,7 +137,9 @@
       <section class="why-section">
         <h2>Pourquoi répondre à l'enquête ?</h2>
         <div class="why-card">
-          <div class="why-icon">&#128200;</div>
+          <div class="why-icon">
+              <SvgIcon name="chart-up" :size="40" />
+            </div>
           <div class="why-content">
             <p>
               <strong>Plus on est nombreux intéressés, plus le projet avance vite.</strong>
@@ -163,7 +171,7 @@
             <span class="source-desc">Explication détaillée du dispositif</span>
           </li>
           <li>
-            <img src="https://www.google.com/s2/favicons?domain=enedis.fr&sz=32" alt="" class="source-favicon" />
+            <SvgIcon name="enedis" :size="20" class="source-favicon enedis-logo" />
             <a href="https://www.enedis.fr/presse/le-reseau-electrique-auto-la-solution-enedis-en-faveur-de-la-mobilite-electrique-dans-les" target="_blank" rel="noopener">
               Enedis
             </a>
@@ -191,8 +199,12 @@
 }
 
 .principle-icon {
-  font-size: 3rem;
+  color: var(--color-primary);
   flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  min-height: 48px;
+  overflow: visible;
 }
 
 .principle-content h2 {
@@ -426,8 +438,10 @@
 }
 
 .why-icon {
-  font-size: 2rem;
+  color: var(--color-warning);
   flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
 }
 
 .why-content p {
@@ -473,6 +487,10 @@
   height: 20px;
   flex-shrink: 0;
   border-radius: 3px;
+}
+
+.enedis-logo {
+  color: var(--color-enedis, #0066b3);
 }
 
 .source-desc {

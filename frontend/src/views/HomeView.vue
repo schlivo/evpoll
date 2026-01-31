@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, inject } from 'vue'
 import StatCard from '../components/StatCard.vue'
+import SvgIcon from '../components/SvgIcon.vue'
 
 const navigateToSection = inject('navigateToSection')
 
@@ -59,23 +60,23 @@ const evCount = () => {
           <StatCard
             :value="stats.total_responses"
             label="Réponses reçues"
-            icon="&#128203;"
+            icon="clipboard"
           />
           <StatCard
             :value="stats.participation_rate"
             suffix="%"
             label="Taux de participation"
-            icon="&#128200;"
+            icon="chart-up"
           />
           <StatCard
             :value="interestedCount()"
             label="Intéressés ou curieux"
-            icon="&#9889;"
+            icon="bolt"
           />
           <StatCard
             :value="evCount()"
             label="Ont ou prévoient un VE"
-            icon="&#128663;"
+            icon="ev-car"
           />
         </div>
         <div class="stats-loading" v-else>
@@ -89,7 +90,9 @@ const evCount = () => {
         <h2>Pourquoi cette enquête ?</h2>
         <div class="info-grid">
           <div class="info-card">
-            <div class="info-icon">&#127968;</div>
+            <div class="info-icon">
+              <SvgIcon name="building" :size="48" />
+            </div>
             <h3>Pour notre copropriété</h3>
             <p>
               Évaluer l'intérêt des copropriétaires et locataires pour
@@ -97,7 +100,9 @@ const evCount = () => {
             </p>
           </div>
           <div class="info-card">
-            <div class="info-icon">&#128176;</div>
+            <div class="info-icon">
+              <SvgIcon name="people" :size="48" />
+            </div>
             <h3>Optimiser les coûts</h3>
             <p>
               Une installation collective permet de mutualiser les coûts
@@ -105,7 +110,9 @@ const evCount = () => {
             </p>
           </div>
           <div class="info-card">
-            <div class="info-icon">&#127793;</div>
+            <div class="info-icon">
+              <SvgIcon name="leaf" :size="48" />
+            </div>
             <h3>Préparer l'avenir</h3>
             <p>
               Anticiper la transition vers la mobilité électrique et
@@ -259,8 +266,10 @@ const evCount = () => {
 }
 
 .info-icon {
-  font-size: 3rem;
+  color: var(--color-primary);
   margin-bottom: 1rem;
+  display: flex;
+  justify-content: center;
 }
 
 .info-card h3 {

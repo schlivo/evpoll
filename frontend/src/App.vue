@@ -1,5 +1,6 @@
 <script setup>
 import { ref, provide, onMounted, onUnmounted, nextTick } from 'vue'
+import SvgIcon from './components/SvgIcon.vue'
 
 // Import all views as components
 import HomeView from './views/HomeView.vue'
@@ -10,11 +11,11 @@ import FaqView from './views/FaqView.vue'
 import EnqueteView from './views/EnqueteView.vue'
 
 const sections = [
-  { id: 'accueil', label: 'Accueil', component: HomeView },
-  { id: 'comprendre', label: 'Comprendre', component: ComprendreView },
-  { id: 'options', label: 'Options', component: OptionsView },
-  { id: 'aides', label: 'Financement', component: AidesView },
-  { id: 'faq', label: 'FAQ', component: FaqView },
+  { id: 'accueil', label: 'Accueil', icon: 'home', component: HomeView },
+  { id: 'comprendre', label: 'Comprendre', icon: 'lightbulb', component: ComprendreView },
+  { id: 'options', label: 'Options', icon: 'bolt', component: OptionsView },
+  { id: 'aides', label: 'Financement', icon: 'euro', component: AidesView },
+  { id: 'faq', label: 'FAQ', icon: 'help', component: FaqView },
 ]
 
 const currentSection = ref(0)
@@ -311,7 +312,7 @@ onUnmounted(() => {
         :key="section.id"
         :id="section.id"
         class="full-section"
-        :class="{ active: currentSection === index }"
+        :class="[`section-bg-${section.id}`, { active: currentSection === index }]"
       >
         <div class="section-content">
           <component :is="section.component" />
@@ -324,10 +325,30 @@ onUnmounted(() => {
           @click="scrollToSection(index + 1)"
         >
           <span class="scroll-indicator-text">Défiler</span>
-          <span class="scroll-indicator-arrow">&#8595;</span>
+          <span class="scroll-indicator-arrow">
+            <SvgIcon name="arrow-down" :size="24" />
+          </span>
         </button>
       </section>
     </div>
+
+    <!-- Mobile bottom navigation -->
+    <nav class="mobile-bottom-nav" v-if="!isEnqueteOpen">
+      <button
+        v-for="(section, index) in sections"
+        :key="section.id"
+        class="bottom-nav-item"
+        :class="{ active: currentSection === index }"
+        @click="scrollToSection(index)"
+      >
+        <SvgIcon :name="section.icon" :size="22" />
+        <span class="bottom-nav-label">{{ section.label }}</span>
+      </button>
+      <button class="bottom-nav-item bottom-nav-cta" @click="openEnquete">
+        <SvgIcon name="clipboard" :size="22" />
+        <span class="bottom-nav-label">Participer</span>
+      </button>
+    </nav>
 
     <!-- Enquete modal -->
     <Transition name="modal">
@@ -335,7 +356,7 @@ onUnmounted(() => {
         <div class="enquete-modal-header">
           <h2>Participer à l'enquête</h2>
           <button class="enquete-close" @click="closeEnquete">
-            <span>&#10005;</span>
+            <SvgIcon name="close" :size="20" />
           </button>
         </div>
         <div class="enquete-modal-content">
@@ -392,6 +413,8 @@ html, body {
 
 .section-content {
   padding-bottom: 80px;
+  position: relative;
+  z-index: 1;
 }
 
 /* Hide default page styling */
@@ -466,6 +489,51 @@ html, body {
   right: 28px;
 }
 
+/* Desktop: cleaner, minimal section nav (no heavy rings) */
+@media (min-width: 769px) {
+  .section-nav {
+    right: 1.5rem;
+    gap: 0.5rem;
+  }
+
+  .section-dot {
+    width: 8px;
+    height: 8px;
+    border: none;
+    background: var(--color-text-muted);
+    box-shadow: none;
+    opacity: 0.5;
+    transition: opacity 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  }
+
+  .section-dot:hover {
+    opacity: 0.9;
+    background: var(--color-primary-light);
+    transform: scale(1.15);
+  }
+
+  .section-dot.active {
+    width: 8px;
+    height: 20px;
+    border-radius: 9999px;
+    opacity: 1;
+    background: var(--color-primary);
+    transform: none;
+  }
+
+  .section-tooltip {
+    right: 20px;
+    font-size: 0.8125rem;
+    padding: 0.375rem 0.625rem;
+    border-radius: var(--radius);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .section-dot:hover .section-tooltip {
+    right: 24px;
+  }
+}
+
 /* Scroll indicator */
 .scroll-indicator {
   position: absolute;
@@ -483,6 +551,7 @@ html, body {
   color: var(--color-text-muted);
   transition: all 0.3s ease;
   animation: bounce 2s infinite;
+  z-index: 2;
 }
 
 .scroll-indicator:hover {
@@ -496,7 +565,9 @@ html, body {
 }
 
 .scroll-indicator-arrow {
-  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @keyframes bounce {
@@ -637,7 +708,7 @@ html, body {
   background: var(--color-bg-alt);
   border: none;
   border-radius: 50%;
-  font-size: 1.25rem;
+  color: var(--color-text);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -696,5 +767,193 @@ html, body {
 /* Hide footer in this mode */
 .app :deep(footer) {
   display: none;
+}
+
+/* ===== Section Backgrounds - Subtils et complémentaires au thème ===== */
+
+/* Accueil - Particules flottantes subtiles */
+.section-bg-accueil {
+  position: relative;
+}
+
+.section-bg-accueil::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 80%, rgba(16, 185, 129, 0.08) 0%, transparent 25%),
+    radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.06) 0%, transparent 25%),
+    radial-gradient(circle at 40% 40%, rgba(16, 185, 129, 0.04) 0%, transparent 30%);
+  pointer-events: none;
+  animation: floatBubbles 20s ease-in-out infinite;
+}
+
+@keyframes floatBubbles {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-20px) scale(1.02); }
+}
+
+/* Comprendre - Dégradé animé très subtil */
+.section-bg-comprendre {
+  position: relative;
+}
+
+.section-bg-comprendre::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(-45deg,
+    rgba(240, 249, 255, 0.5),
+    rgba(224, 242, 254, 0.5),
+    rgba(240, 253, 244, 0.5),
+    rgba(236, 253, 245, 0.5)
+  );
+  background-size: 400% 400%;
+  animation: gradientShift 20s ease infinite;
+  pointer-events: none;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Options - Motif géométrique très léger */
+.section-bg-options {
+  position: relative;
+}
+
+.section-bg-options::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2310b981' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+/* Financement - Accent vert subtil */
+.section-bg-aides {
+  position: relative;
+}
+
+.section-bg-aides::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 0% 0%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 100% 100%, rgba(5, 150, 105, 0.08) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* FAQ - Fond doux */
+.section-bg-faq {
+  position: relative;
+}
+
+.section-bg-faq::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 10% 90%, rgba(16, 185, 129, 0.05) 0%, transparent 30%),
+    radial-gradient(circle at 90% 10%, rgba(59, 130, 246, 0.04) 0%, transparent 30%);
+  pointer-events: none;
+}
+
+/* ===== Mobile Bottom Navigation ===== */
+.mobile-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--color-bg);
+    border-top: 1px solid var(--color-border);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    z-index: 100;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  .bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.5rem 0.25rem;
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    font-size: 0.625rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+  }
+
+  .bottom-nav-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%) scaleX(0);
+    width: 24px;
+    height: 2px;
+    background: var(--color-primary);
+    border-radius: 0 0 2px 2px;
+    transition: transform 0.2s ease;
+  }
+
+  .bottom-nav-item.active {
+    color: var(--color-primary);
+  }
+
+  .bottom-nav-item.active::before {
+    transform: translateX(-50%) scaleX(1);
+  }
+
+  .bottom-nav-item:active {
+    background: var(--color-bg-alt);
+  }
+
+  .bottom-nav-label {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  .bottom-nav-cta {
+    color: var(--color-primary);
+    background: var(--color-primary-light);
+    border-radius: 0;
+  }
+
+  .bottom-nav-cta:active {
+    background: var(--color-primary);
+    color: white;
+  }
+
+  /* Ajuster le padding pour la barre de navigation en bas */
+  .scroll-container {
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0));
+  }
+
+  .section-content {
+    padding-bottom: 100px;
+  }
+
+  /* Cacher l'indicateur de scroll sur mobile car on a la bottom nav */
+  .scroll-indicator {
+    display: none;
+  }
 }
 </style>
