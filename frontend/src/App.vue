@@ -24,6 +24,19 @@ const sections = [
 
 const currentSection = ref(0)
 const isEnqueteOpen = ref(false)
+const isPrivacyOpen = ref(false)
+
+const openPrivacy = () => {
+  isPrivacyOpen.value = true
+  document.body.style.overflow = 'hidden'
+}
+
+const closePrivacy = () => {
+  isPrivacyOpen.value = false
+  if (!isEnqueteOpen.value) {
+    document.body.style.overflow = ''
+  }
+}
 const scrollContainer = ref(null)
 const isScrolling = ref(false)
 const lastScrollTop = ref(0)
@@ -62,6 +75,7 @@ const closeEnquete = () => {
   document.body.style.overflow = ''
 }
 provide('closeEnquete', closeEnquete)
+provide('openPrivacy', openPrivacy)
 
 const SCROLL_DURATION_MS = 1100
 
@@ -281,18 +295,28 @@ onUnmounted(() => {
 
   <!-- Main tunnel navigation -->
   <div v-else class="app" :class="{ 'enquete-open': isEnqueteOpen }">
-    <!-- Minimal sticky header (mobile only, Apple-style) -->
-    <header class="mobile-header" :class="{ 'header-hidden': headerHidden }" v-if="!isEnqueteOpen">
-      <span class="mobile-header-logo">Enquête IRVE</span>
-      <span class="mobile-header-title">{{ sections[currentSection]?.label ?? 'Accueil' }}</span>
-      <button
-        type="button"
-        class="mobile-header-cta"
-        @click="openEnquete"
-        aria-label="Participer à l'enquête"
-      >
-        Participer
-      </button>
+    <!-- Minimal sticky header -->
+    <header class="mobile-header" :class="{ 'header-hidden': headerHidden }" v-if="!isEnqueteOpen && !isPrivacyOpen">
+      <span class="mobile-header-title">Enquête IRVE</span>
+      <div class="mobile-header-actions">
+        <button
+          class="mobile-header-privacy"
+          @click="openPrivacy"
+          title="Politique de confidentialité"
+          aria-label="Politique de confidentialité"
+        >
+          <SvgIcon name="shield" :size="20" />
+        </button>
+        <!-- CTA only on desktop (mobile has bottom nav) -->
+        <button
+          type="button"
+          class="mobile-header-cta desktop-only"
+          @click="openEnquete"
+          aria-label="Participer à l'enquête"
+        >
+          Participer
+        </button>
+      </div>
     </header>
 
     <!-- Side navigation dots -->
@@ -341,7 +365,7 @@ onUnmounted(() => {
     </div>
 
     <!-- Mobile bottom navigation -->
-    <nav class="mobile-bottom-nav" v-if="!isEnqueteOpen">
+    <nav class="mobile-bottom-nav" v-if="!isEnqueteOpen && !isPrivacyOpen">
       <button
         v-for="(section, index) in sections"
         :key="section.id"
@@ -379,6 +403,91 @@ onUnmounted(() => {
         v-if="isEnqueteOpen"
         class="modal-backdrop"
         @click="closeEnquete"
+      ></div>
+    </Transition>
+
+    <!-- Privacy policy modal -->
+    <Transition name="modal">
+      <div v-if="isPrivacyOpen" class="privacy-modal">
+        <div class="privacy-modal-header">
+          <h2>Politique de confidentialité</h2>
+          <button class="privacy-close" @click="closePrivacy">
+            <SvgIcon name="close" :size="20" />
+          </button>
+        </div>
+        <div class="privacy-modal-content">
+          <div class="privacy-section">
+            <h3>Responsable du traitement</h3>
+            <p>La copropriété, représentée par le conseil syndical.</p>
+          </div>
+
+          <div class="privacy-section">
+            <h3>Finalité du traitement</h3>
+            <p>Les données collectées ont pour unique finalité d'évaluer les besoins des résidents en matière de bornes de recharge pour véhicules électriques (IRVE) et de dimensionner le projet.</p>
+          </div>
+
+          <div class="privacy-section">
+            <h3>Données collectées</h3>
+            <ul>
+              <li><strong>Identification :</strong> Bâtiment, numéro d'appartement (optionnel), place de parking (optionnel), statut (propriétaire/locataire)</li>
+              <li><strong>Besoins :</strong> Possession d'un véhicule électrique, niveau d'intérêt, solution préférée, horizon temporel</li>
+              <li><strong>Contact :</strong> Email (optionnel, uniquement si vous souhaitez être informé)</li>
+              <li><strong>Technique :</strong> Adresse IP, date de soumission (à des fins de sécurité)</li>
+            </ul>
+          </div>
+
+          <div class="privacy-section">
+            <h3>Stockage local</h3>
+            <p>Un marqueur est enregistré dans le stockage local de votre navigateur (localStorage) pour éviter les soumissions en double. Ce marqueur ne contient aucune donnée personnelle et reste uniquement sur votre appareil.</p>
+          </div>
+
+          <div class="privacy-section">
+            <h3>Durée de conservation</h3>
+            <p>Les données sont conservées jusqu'à la fin du projet IRVE, puis 1 an supplémentaire pour d'éventuels suivis. Elles sont ensuite automatiquement supprimées.</p>
+          </div>
+
+          <div class="privacy-section">
+            <h3>Vos droits</h3>
+            <p>Conformément au RGPD, vous disposez des droits suivants :</p>
+            <ul>
+              <li><strong>Droit d'accès :</strong> Obtenir une copie de vos données</li>
+              <li><strong>Droit de rectification :</strong> Corriger des données inexactes</li>
+              <li><strong>Droit à l'effacement :</strong> Demander la suppression de vos données</li>
+              <li><strong>Droit à la portabilité :</strong> Recevoir vos données dans un format structuré</li>
+              <li><strong>Droit de retrait du consentement :</strong> Retirer votre consentement à tout moment</li>
+            </ul>
+            <p>Pour exercer ces droits, contactez le conseil syndical par email.</p>
+          </div>
+
+          <div class="privacy-section">
+            <h3>Sécurité</h3>
+            <ul>
+              <li>Données chiffrées en transit (HTTPS)</li>
+              <li>Hébergement en France sur serveur privé</li>
+              <li>Mots de passe administrateur hashés (bcrypt)</li>
+              <li>Protection contre les attaques par force brute</li>
+              <li>Aucune transmission à des tiers</li>
+            </ul>
+          </div>
+
+          <div class="privacy-section">
+            <h3>Cookies</h3>
+            <p>Ce site n'utilise pas de cookies tiers, de trackers publicitaires ni d'outils d'analyse. Seul le stockage local du navigateur est utilisé pour des fonctions techniques (prévention des doublons, authentification administrateur).</p>
+          </div>
+
+          <div class="privacy-footer">
+            <p>Dernière mise à jour : Janvier 2026</p>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Privacy modal backdrop -->
+    <Transition name="fade">
+      <div
+        v-if="isPrivacyOpen"
+        class="modal-backdrop"
+        @click="closePrivacy"
       ></div>
     </Transition>
   </div>
@@ -614,23 +723,35 @@ html, body {
   transform: translateY(-100%);
 }
 
-.mobile-header-logo {
+.mobile-header-title {
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 1.125rem;
   color: var(--color-text);
-  flex-shrink: 0;
 }
 
-.mobile-header-title {
-  font-size: 1rem;
-  font-weight: 500;
+.mobile-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mobile-header-privacy {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: var(--radius);
   color: var(--color-text-muted);
-  flex: 1;
-  text-align: center;
-  padding: 0 1rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mobile-header-privacy:hover {
+  background: var(--color-bg-alt);
+  color: var(--color-primary);
 }
 
 .mobile-header-cta {
@@ -650,23 +771,25 @@ html, body {
   background: var(--color-primary-dark);
 }
 
+/* Hide header CTA on mobile (bottom nav has it) */
+.mobile-header-cta.desktop-only {
+  display: none;
+}
+
+@media (min-width: 769px) {
+  .mobile-header-cta.desktop-only {
+    display: flex;
+  }
+}
+
 /* Mobile adjustments */
 @media (max-width: 768px) {
   .mobile-header {
     padding: 0 1rem;
   }
 
-  .mobile-header-logo {
-    font-size: 0.9375rem;
-    max-width: 30%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   .mobile-header-title {
-    font-size: 0.9375rem;
-    padding: 0 0.5rem;
+    font-size: 1rem;
   }
 
   .mobile-header-cta {
@@ -739,6 +862,100 @@ html, body {
 
 .enquete-modal-content :deep(.page-header) {
   display: none;
+}
+
+/* Privacy modal */
+.privacy-modal {
+  position: fixed;
+  inset: 0;
+  background: var(--color-bg);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.privacy-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.privacy-modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.privacy-close {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-alt);
+  border: none;
+  border-radius: 50%;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.privacy-close:hover {
+  background: var(--color-border);
+}
+
+.privacy-modal-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+  padding-bottom: 3rem;
+}
+
+.privacy-section {
+  margin-bottom: 1.5rem;
+}
+
+.privacy-section h3 {
+  font-size: 1rem;
+  color: var(--color-primary);
+  margin: 0 0 0.5rem;
+}
+
+.privacy-section p {
+  margin: 0 0 0.5rem;
+  color: var(--color-text-light);
+  line-height: 1.6;
+}
+
+.privacy-section ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--color-text-light);
+}
+
+.privacy-section li {
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.privacy-section li strong {
+  color: var(--color-text);
+}
+
+.privacy-footer {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+  text-align: center;
+}
+
+.privacy-footer p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
 }
 
 .modal-backdrop {

@@ -1,8 +1,13 @@
 <script setup>
-import { ref, computed, inject, onMounted } from 'vue'
+import { ref, computed, inject, onMounted, watch } from 'vue'
 import SvgIcon from '../components/SvgIcon.vue'
 
 const closeEnquete = inject('closeEnquete')
+const openPrivacy = inject('openPrivacy', () => {})
+
+const openPrivacyPolicy = () => {
+  openPrivacy()
+}
 
 const currentStep = ref(1)
 const totalSteps = 4
@@ -10,6 +15,8 @@ const isSubmitting = ref(false)
 const isSubmitted = ref(false)
 const submitError = ref('')
 const configLoading = ref(true)
+const hasExistingSubmission = ref(false)
+const existingSubmissionBuilding = ref('')
 
 const formData = ref({
   building: '',
@@ -22,7 +29,8 @@ const formData = ref({
   timeline: '',
   comments: '',
   email: '',
-  consent_contact: false
+  consent_contact: false,
+  consent_timestamp: null
 })
 
 const errors = ref({})
@@ -30,8 +38,63 @@ const buildings = ref(['A', 'B', 'C', 'D']) // Default fallback
 const contactEmail = ref('conseil-syndical@exemple.fr')
 const syndicEmail = ref('syndic@exemple.fr')
 
+// Storage key for submission marker
+const SUBMISSION_STORAGE_KEY = 'irve_survey_submission'
+
+// Check for existing submission in localStorage
+const checkExistingSubmission = () => {
+  try {
+    const stored = localStorage.getItem(SUBMISSION_STORAGE_KEY)
+    if (stored) {
+      const data = JSON.parse(stored)
+      // Check if submission was within 30 days
+      const submissionDate = new Date(data.timestamp)
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+      if (submissionDate > thirtyDaysAgo) {
+        hasExistingSubmission.value = true
+        existingSubmissionBuilding.value = data.building || ''
+        return true
+      }
+    }
+  } catch (e) {
+    // Invalid data, ignore
+  }
+  return false
+}
+
+// Save submission marker to localStorage
+const saveSubmissionMarker = (building) => {
+  try {
+    const data = {
+      timestamp: new Date().toISOString(),
+      building,
+      submitted: true
+    }
+    localStorage.setItem(SUBMISSION_STORAGE_KEY, JSON.stringify(data))
+  } catch (e) {
+    // localStorage not available, continue without marker
+  }
+}
+
+// Watch consent checkbox to record timestamp
+watch(() => formData.value.consent_contact, (newValue) => {
+  if (newValue && !formData.value.consent_timestamp) {
+    formData.value.consent_timestamp = new Date().toISOString()
+  }
+})
+
+// Allow user to proceed despite existing submission
+const proceedAnyway = () => {
+  hasExistingSubmission.value = false
+}
+
 // Fetch configuration from API
 onMounted(async () => {
+  // Check for existing submission first
+  checkExistingSubmission()
+
   try {
     const response = await fetch('/api/config')
     if (response.ok) {
@@ -110,7 +173,12 @@ const submitForm = async () => {
     const data = await response.json()
 
     if (response.ok) {
+      // Save submission marker to localStorage
+      saveSubmissionMarker(formData.value.building)
       isSubmitted.value = true
+    } else if (response.status === 409 && data.error === 'duplicate') {
+      // Duplicate submission detected by server
+      submitError.value = data.message || 'Une réponse similaire a déjà été enregistrée.'
     } else {
       submitError.value = data.errors?.join(', ') || data.message || 'Une erreur est survenue'
     }
@@ -134,8 +202,31 @@ const submitForm = async () => {
         </p>
       </header>
 
+      <!-- Already submitted warning -->
+      <div v-if="hasExistingSubmission && !isSubmitted" class="warning-card fade-in">
+        <div class="warning-icon">
+          <SvgIcon name="shield" :size="40" />
+        </div>
+        <h2>Vous avez déjà participé</h2>
+        <p>
+          Une réponse a été enregistrée depuis cet appareil
+          <span v-if="existingSubmissionBuilding">(Bâtiment {{ existingSubmissionBuilding }})</span>.
+        </p>
+        <p class="text-muted">
+          Si vous souhaitez modifier votre réponse, veuillez contacter le conseil syndical.
+        </p>
+        <div class="warning-actions">
+          <button @click="closeEnquete" class="btn btn-secondary">
+            Retour à l'accueil
+          </button>
+          <button @click="proceedAnyway" class="btn btn-primary">
+            Soumettre une nouvelle réponse
+          </button>
+        </div>
+      </div>
+
       <!-- Success state -->
-      <div v-if="isSubmitted" class="success-card fade-in">
+      <div v-else-if="isSubmitted" class="success-card fade-in">
         <div class="success-icon">
           <SvgIcon name="check" :size="40" />
         </div>
@@ -150,7 +241,7 @@ const submitForm = async () => {
       </div>
 
       <!-- Form -->
-      <div v-else class="survey-form">
+      <div v-else-if="!hasExistingSubmission" class="survey-form">
         <!-- Progress bar -->
         <div class="progress-container">
           <div class="progress-info">
@@ -573,16 +664,22 @@ const submitForm = async () => {
           </div>
 
           <div class="rgpd-notice">
-            <h4>Informations RGPD</h4>
+            <h4>Protection de vos données (RGPD)</h4>
             <p>
-              Les données collectées sont traitées par la copropriété dans le cadre de l'enquête
-              sur le projet IRVE. Elles sont conservées jusqu'à la fin du projet + 1 an.
-              Vous disposez d'un droit d'accès, de rectification et de suppression de vos données
-              en contactant le conseil syndical à <a :href="'mailto:' + contactEmail">{{ contactEmail }}</a>.
+              <strong>Responsable :</strong> La copropriété (conseil syndical).
+              <strong>Finalité :</strong> Évaluer les besoins en bornes de recharge.
             </p>
             <p>
-              <strong>Aucune donnée n'est transmise à des tiers.</strong>
-              L'hébergement est réalisé en France sur un serveur privé.
+              <strong>Conservation :</strong> Fin du projet + 1 an.
+              <strong>Stockage local :</strong> Un marqueur anti-doublon est enregistré sur votre appareil.
+            </p>
+            <p>
+              <strong>Vos droits :</strong> Accès, rectification, suppression, portabilité.
+              Contact : <a :href="'mailto:' + contactEmail">{{ contactEmail }}</a>
+            </p>
+            <p>
+              <strong>Sécurité :</strong> Données chiffrées, hébergement en France, aucun tiers.
+              <a href="#" @click.prevent="openPrivacyPolicy" class="privacy-link">Voir la politique complète</a>
             </p>
           </div>
 
@@ -667,7 +764,8 @@ const submitForm = async () => {
   gap: 1rem;
 }
 
-.success-card {
+.success-card,
+.warning-card {
   background: var(--color-bg-card);
   border: 1px solid var(--color-success);
   border-radius: var(--radius-lg);
@@ -675,6 +773,51 @@ const submitForm = async () => {
   text-align: center;
   max-width: 500px;
   margin: 0 auto;
+}
+
+.warning-card {
+  border-color: var(--color-warning);
+}
+
+.warning-icon {
+  width: 80px;
+  height: 80px;
+  background: var(--color-warning);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+}
+
+.warning-card h2 {
+  color: var(--color-warning);
+  margin-bottom: 0.75rem;
+}
+
+.warning-card p {
+  color: var(--color-text-light);
+  margin-bottom: 0.75rem;
+}
+
+.warning-card .text-muted {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.warning-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+@media (min-width: 480px) {
+  .warning-actions {
+    flex-direction: row;
+    justify-content: center;
+  }
 }
 
 .success-icon {
@@ -720,5 +863,16 @@ const submitForm = async () => {
 
 .rgpd-notice p:last-child {
   margin-bottom: 0;
+}
+
+.rgpd-notice .privacy-link {
+  display: inline-block;
+  margin-top: 0.25rem;
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.rgpd-notice .privacy-link:hover {
+  color: var(--color-primary-dark);
 }
 </style>

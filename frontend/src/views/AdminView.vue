@@ -4,12 +4,17 @@ import SvgIcon from '../components/SvgIcon.vue'
 
 const isAuthenticated = ref(false)
 const password = ref('')
-const storedPassword = ref('') // Store password for API calls
+const authToken = ref('') // Store auth token for API calls
+const tokenExpiry = ref(null)
 const passwordError = ref('')
 const stats = ref(null)
 const loading = ref(false)
 const loginLoading = ref(false)
 const error = ref('')
+
+// Token storage keys
+const TOKEN_STORAGE_KEY = 'irve_admin_token'
+const TOKEN_EXPIRY_KEY = 'irve_admin_token_expiry'
 
 const login = async () => {
   loginLoading.value = true
@@ -20,13 +25,18 @@ const login = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: password.value })
     })
-    if (response.ok) {
+    const data = await response.json()
+    if (response.ok && data.success) {
       isAuthenticated.value = true
-      storedPassword.value = password.value
-      sessionStorage.setItem('admin_auth', 'true')
+      authToken.value = data.token
+      tokenExpiry.value = data.expiresAt
+      // Store token in sessionStorage (cleared when browser closes)
+      sessionStorage.setItem(TOKEN_STORAGE_KEY, data.token)
+      sessionStorage.setItem(TOKEN_EXPIRY_KEY, data.expiresAt)
+      password.value = '' // Clear password from memory
       loadStats()
     } else {
-      passwordError.value = 'Mot de passe incorrect'
+      passwordError.value = data.error || 'Mot de passe incorrect'
     }
   } catch (err) {
     passwordError.value = 'Impossible de se connecter au serveur'
@@ -35,11 +45,33 @@ const login = async () => {
   }
 }
 
-const logout = () => {
+const logout = async () => {
+  // Notify server to revoke token
+  if (authToken.value) {
+    try {
+      await fetch('/api/stats/logout', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken.value}`
+        }
+      })
+    } catch (e) {
+      // Ignore logout errors
+    }
+  }
+  // Clear local state
   isAuthenticated.value = false
-  storedPassword.value = ''
-  sessionStorage.removeItem('admin_auth')
+  authToken.value = ''
+  tokenExpiry.value = null
+  sessionStorage.removeItem(TOKEN_STORAGE_KEY)
+  sessionStorage.removeItem(TOKEN_EXPIRY_KEY)
   stats.value = null
+}
+
+// Check if token is still valid
+const isTokenValid = () => {
+  if (!tokenExpiry.value) return false
+  return new Date(tokenExpiry.value) > new Date()
 }
 
 const loadStats = async () => {
@@ -62,7 +94,7 @@ const loadStats = async () => {
 const exportCSV = async () => {
   try {
     const response = await fetch('/api/stats/export', {
-      headers: { 'X-Admin-Password': storedPassword.value }
+      headers: { 'Authorization': `Bearer ${authToken.value}` }
     })
     if (response.ok) {
       const blob = await response.blob()
@@ -150,13 +182,22 @@ const evColor = {
 }
 
 onMounted(() => {
-  // Session-based auth: requires re-login on page refresh for security
-  // sessionStorage is cleared when browser/tab closes
-  if (sessionStorage.getItem('admin_auth') === 'true') {
-    // Show stats but export will fail without password
-    // User should re-login for full functionality
-    isAuthenticated.value = true
-    loadStats()
+  // Check for existing valid token in sessionStorage
+  const storedToken = sessionStorage.getItem(TOKEN_STORAGE_KEY)
+  const storedExpiry = sessionStorage.getItem(TOKEN_EXPIRY_KEY)
+
+  if (storedToken && storedExpiry) {
+    // Check if token is still valid
+    if (new Date(storedExpiry) > new Date()) {
+      authToken.value = storedToken
+      tokenExpiry.value = storedExpiry
+      isAuthenticated.value = true
+      loadStats()
+    } else {
+      // Token expired, clear storage
+      sessionStorage.removeItem(TOKEN_STORAGE_KEY)
+      sessionStorage.removeItem(TOKEN_EXPIRY_KEY)
+    }
   }
 })
 </script>
