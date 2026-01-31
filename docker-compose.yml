@@ -26,14 +26,14 @@ services:
       replicas: 1
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.irve.rule=Host(`irve.exemple.fr`)"
+        - "traefik.http.routers.irve.rule=Host(`irve.example.com`)"
         - "traefik.http.routers.irve.entrypoints=websecure"
         - "traefik.http.routers.irve.tls.certresolver=letsencrypt"
         - "traefik.http.services.irve.loadbalancer.server.port=3000"
         - "traefik.docker.network=traefik-public"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.irve.rule=Host(`irve.exemple.fr`)"
+      - "traefik.http.routers.irve.rule=Host(`irve.example.com`)"
       - "traefik.http.routers.irve.entrypoints=websecure"
       - "traefik.http.routers.irve.tls.certresolver=letsencrypt"
       - "traefik.http.services.irve.loadbalancer.server.port=3000"
