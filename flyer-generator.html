@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur de Flyer IRVE</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #1a1a2e;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .generator-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+
+        @media (max-width: 900px) {
+            .generator-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Form Panel */
+        .form-panel {
+            background: #16213e;
+            border-radius: 16px;
+            padding: 24px;
+            color: white;
+            position: sticky;
+            top: 20px;
+        }
+
+        .form-panel h1 {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            color: #22c55e;
+        }
+
+        .form-panel p {
+            font-size: 0.875rem;
+            color: #94a3b8;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #e2e8f0;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            background: #1e293b;
+            color: white;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #22c55e;
+        }
+
+        .form-group input::placeholder {
+            color: #64748b;
+        }
+
+        .form-group small {
+            display: block;
+            margin-top: 6px;
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(34, 197, 94, 0.3);
+        }
+
+        .btn-secondary {
+            background: #334155;
+            color: white;
+            margin-top: 12px;
+        }
+
+        .btn-secondary:hover {
+            background: #475569;
+        }
+
+        .divider {
+            height: 1px;
+            background: #334155;
+            margin: 24px 0;
+        }
+
+        .tips {
+            background: #1e293b;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+
+        .tips h3 {
+            font-size: 0.875rem;
+            color: #22c55e;
+            margin-bottom: 8px;
+        }
+
+        .tips ul {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            padding-left: 16px;
+        }
+
+        .tips li {
+            margin-bottom: 4px;
+        }
+
+        /* Preview Panel */
+        .preview-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .preview-header {
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .preview-header h2 {
+            font-size: 1.25rem;
+            color: #e2e8f0;
+        }
+
+        /* Flyer Styles */
+        @page {
+            size: A5 portrait;
+            margin: 0;
+        }
+
+        @media print {
+            body {
+                background: white !important;
+                padding: 0 !important;
+            }
+            .form-panel, .preview-header {
+                display: none !important;
+            }
+            .generator-container {
+                display: block !important;
+            }
+            .preview-panel {
+                display: block !important;
+            }
+            .flyer {
+                box-shadow: none !important;
+                margin: 0 !important;
+            }
+            body {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+
+        .flyer {
+            width: 148mm;
+            height: 210mm;
+            background: #ffffff;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .flyer .bg-tiles {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        .flyer > *:not(.bg-tiles) {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .header svg {
+            width: 40px;
+            height: 40px;
+        }
+
+        .header-text {
+            color: #1e293b;
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        .residence-badge {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 5px 14px;
+            border-radius: 15px;
+            display: inline-block;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Titre */
+        .main-title {
+            text-align: center;
+            color: #1e293b;
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1.3;
+            margin-bottom: 10px;
+        }
+
+        .main-title .highlight {
+            color: #22c55e;
+        }
+
+        /* Stats */
+        .stats-section {
+            text-align: center;
+            margin-bottom: 10px;
+            padding: 0 10px;
+        }
+
+        .stats-text {
+            color: #475569;
+            font-size: 11px;
+            line-height: 1.45;
+            font-style: italic;
+        }
+
+        .stats-text strong {
+            color: #1e293b;
+            font-weight: 700;
+            font-style: normal;
+        }
+
+        .stats-question {
+            color: #1e293b;
+            font-weight: 700;
+            font-size: 15px;
+            margin-top: 4px;
+        }
+
+        /* Icons row */
+        .icons-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 25px;
+            margin: 12px 0;
+        }
+
+        .icon-item svg {
+            width: 45px;
+            height: 45px;
+        }
+
+        /* CTA Text */
+        .cta-text {
+            text-align: center;
+            margin-bottom: 10px;
+            padding: 0 10px;
+        }
+
+        .cta-text p {
+            color: #475569;
+            font-size: 11px;
+            line-height: 1.45;
+        }
+
+        .cta-text strong {
+            color: #1e293b;
+            font-weight: 700;
+        }
+
+        /* Highlight box */
+        .highlight-box {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 14px;
+        }
+
+        .highlight-box p {
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        /* Content row */
+        .content-row {
+            display: flex;
+            gap: 16px;
+            flex: 1;
+            align-items: flex-start;
+        }
+
+        /* Benefits */
+        .benefits-section {
+            flex: 1;
+        }
+
+        .benefit-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .bullet {
+            color: #22c55e;
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1.2;
+            flex-shrink: 0;
+        }
+
+        .benefit-text {
+            color: #334155;
+            font-size: 10px;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+
+        .benefit-text strong {
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .benefit-arrow {
+            color: #22c55e;
+            font-weight: 700;
+        }
+
+        /* Why wait section */
+        .why-wait {
+            background: #f0fdf4;
+            border-left: 4px solid #22c55e;
+            padding: 10px 12px;
+            margin-top: 10px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .why-wait p {
+            font-size: 9px;
+            color: #334155;
+            line-height: 1.4;
+        }
+
+        .why-wait strong {
+            color: #166534;
+        }
+
+        /* QR Section */
+        .qr-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .qr-container {
+            background: white;
+            padding: 8px;
+            border-radius: 10px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .qr-container img {
+            display: block;
+            width: 48mm;
+            height: 48mm;
+        }
+
+        .qr-text {
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        .qr-text p {
+            color: #475569;
+            font-size: 10px;
+            line-height: 1.3;
+        }
+
+        .qr-text .arrow {
+            color: #22c55e;
+            font-weight: 700;
+        }
+
+        .qr-url {
+            color: #22c55e;
+            font-size: 12px;
+            font-weight: 700;
+            margin-top: 3px;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: auto;
+            padding-top: 10px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .footer-text {
+            color: #475569;
+            font-size: 9px;
+            line-height: 1.45;
+            font-style: italic;
+        }
+
+        .footer-icons {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 4px;
+        }
+
+        .footer-icons svg {
+            width: 14px;
+            height: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="generator-container">
+        <!-- Form Panel -->
+        <div class="form-panel">
+            <h1>Générateur de Flyer</h1>
+            <p>Personnalisez le flyer pour votre copropriété</p>
+
+            <div class="form-group">
+                <label for="coproName">Nom de la copropriété</label>
+                <input type="text" id="coproName" placeholder="Ex: Les Jardins du Parc" value="Le clos des églantines">
+                <small>Apparaîtra dans le badge vert en haut du flyer</small>
+            </div>
+
+            <div class="form-group">
+                <label for="siteUrl">URL du site d'enquête</label>
+                <input type="url" id="siteUrl" placeholder="Ex: https://irve.exemple.fr" value="https://irve.example.com">
+                <small>Le QR code sera généré automatiquement</small>
+            </div>
+
+            <button class="btn btn-primary" onclick="updateFlyer()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Mettre à jour
+            </button>
+
+            <button class="btn btn-secondary" onclick="window.print()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z"/>
+                </svg>
+                Imprimer / PDF
+            </button>
+
+            <div class="divider"></div>
+
+            <div class="tips">
+                <h3>Conseils</h3>
+                <ul>
+                    <li>Format d'impression : A5 portrait</li>
+                    <li>Utilisez "Enregistrer en PDF" pour un fichier numérique</li>
+                    <li>Imprimez en couleur pour un meilleur rendu</li>
+                    <li>Testez le QR code avant distribution</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Preview Panel -->
+        <div class="preview-panel">
+            <div class="preview-header">
+                <h2>Aperçu du flyer</h2>
+            </div>
+
+            <div class="flyer" id="flyer">
+                <!-- Background tiles -->
+                <svg class="bg-tiles" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 793" preserveAspectRatio="xMidYMid slice">
+                    <defs>
+                        <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0" stop-color="#ffffff"/>
+                            <stop offset="1" stop-color="#f6f7fb"/>
+                        </linearGradient>
+                        <linearGradient id="bevel" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0" stop-color="#ffffff" stop-opacity="1"/>
+                            <stop offset="0.55" stop-color="#ffffff" stop-opacity="1"/>
+                            <stop offset="1" stop-color="#cfd3da" stop-opacity="0.35"/>
+                        </linearGradient>
+                        <filter id="tileShadow" x="-30%" y="-30%" width="160%" height="160%">
+                            <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000" flood-opacity="0.08"/>
+                        </filter>
+                        <pattern id="tiles" width="140" height="90" patternUnits="userSpaceOnUse">
+                            <g filter="url(#tileShadow)">
+                                <rect x="0" y="0" width="70" height="45" fill="#fff"/>
+                                <rect x="0" y="0" width="70" height="45" fill="url(#bevel)" opacity="0.75"/>
+                                <rect x="70" y="0" width="70" height="45" fill="#fff"/>
+                                <rect x="70" y="0" width="70" height="45" fill="url(#bevel)" opacity="0.75"/>
+                                <rect x="-35" y="45" width="70" height="45" fill="#fff"/>
+                                <rect x="-35" y="45" width="70" height="45" fill="url(#bevel)" opacity="0.75"/>
+                                <rect x="35" y="45" width="70" height="45" fill="#fff"/>
+                                <rect x="35" y="45" width="70" height="45" fill="url(#bevel)" opacity="0.75"/>
+                                <rect x="105" y="45" width="70" height="45" fill="#fff"/>
+                                <rect x="105" y="45" width="70" height="45" fill="url(#bevel)" opacity="0.75"/>
+                            </g>
+                        </pattern>
+                    </defs>
+                    <rect width="560" height="793" fill="url(#bgGrad)"/>
+                    <g transform="rotate(45 280 396)">
+                        <rect x="-400" y="-400" width="1400" height="1600" fill="url(#tiles)"/>
+                    </g>
+                </svg>
+
+                <!-- Header -->
+                <div class="header">
+                    <svg viewBox="0 0 41 41" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M19.0174 41V34.8697C11.0869 33.7988 5.125 27.1221 5.125 19.287V8.17377H10.9079V2.60075C10.9079 1.16924 12.1048 0 13.5812 0C15.0577 0 16.2434 1.16924 16.2434 2.60075V8.16285H26.2209V2.60075C26.2209 1.15832 27.4177 0 28.883 0C30.3483 0 31.5452 1.16924 31.5452 2.60075V8.16285H37.3393V19.2761C37.3393 27.1221 31.3774 33.7878 23.4469 34.8587V40.9891L19.0174 41ZM9.55446 19.287C9.55446 25.5813 14.7893 30.6954 21.2321 30.6954C27.675 30.6954 32.9098 25.5813 32.9098 19.287V12.5011H9.55446V19.287Z" fill="url(#logoPlug)"/>
+                        <defs>
+                            <linearGradient id="logoPlug" x1="21" y1="0" x2="42" y2="23" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#22c55e"/><stop offset="1" stop-color="#047857"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <span class="header-text">IRVE</span>
+                </div>
+
+                <div style="text-align: center;">
+                    <span class="residence-badge" id="residenceBadge">Le clos des églantines</span>
+                </div>
+
+                <!-- Titre -->
+                <h1 class="main-title">
+                    Prêts pour la recharge <span class="highlight">électrique</span><br>
+                    dans notre <span class="highlight">copropriété</span> ?
+                </h1>
+
+                <!-- Stats -->
+                <div class="stats-section">
+                    <p class="stats-text">
+                        <strong>80 % des copropriétaires</strong> qui installent des IRVE regrettent de ne pas l'avoir fait plus tôt <em>(selon sondages)</em>...
+                    </p>
+                    <p class="stats-question">Et vous ?</p>
+                </div>
+
+                <!-- Icons row -->
+                <div class="icons-row">
+                    <!-- Voiture électrique -->
+                    <div class="icon-item">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#22c55e"><path d="M18.195 4.173l1.298-1.535c.542.434 1.032.925 1.491 1.444l-1.498 1.333c-.396-.448-.821-.87-1.291-1.242zm-.195 6.332v-.255c0-.138-.112-.25-.25-.25h-1.101l.543 1c.345 0 .808-.098.808-.495zm3.931.322h2.001c-.072-.742-.219-1.459-.421-2.155l-1.874.711c.129.47.236.949.294 1.444zm-.8-2.856l1.873-.711c-.304-.702-.668-1.369-1.095-1.994l-1.504 1.338c.28.432.515.893.726 1.367zm.869 4.356c-.175 5.362-4.597 9.673-10 9.673-5.514 0-10-4.486-10-10 0-1.452.314-2.83.875-4.074l.086-.158c1.002.349 2.172.22 3.103-.643 1.597-1.486 1.216-3.62 2.808-5.264.592-.612 1.278-.924 2.037-.996-1.327-.62-2.618-.865-3.809-.865-3.935 0-6.771 2.879-6.174 5.47 1.46-1.837 3.631-2.541 4.445-2.541-3.671 1.544-5.371 5.246-5.371 9.071 0 6.627 5.373 12 12 12 6.517 0 11.825-5.198 12-11.673h-2zm-15.75-2.327c-.138 0-.25.112-.25.25v.255c0 .397.463.495.808.495l.543-1h-1.101zm2.185-.873c.415-.691.631-.854 1.139-.945.767-.137 1.459-.182 2.426-.182s1.659.045 2.426.182c.508.091.725.253 1.139.945.539.899 1.05 1.857 1.465 2.626.32.593.473 1.126.473 1.833 0 .685-.198 1.267-.503 1.991v.923c0 .276-.224.5-.5.5h-.75c-.276 0-.5-.224-.5-.5v-.5h-6.5v.5c0 .276-.224.5-.5.5h-.75c-.276 0-.5-.224-.5-.5v-.924c-.304-.724-.503-1.306-.503-1.991 0-.707.154-1.24.473-1.833.415-.768.926-1.726 1.465-2.625zm.565 4.123c0-.414-.336-.75-.75-.75s-.75.336-.75.75.336.75.75.75.75-.336.75-.75zm5 .5c0-.138-.112-.25-.25-.25h-3.5c-.138 0-.25.112-.25.25s.112.25.25.25h3.5c.138 0 .25-.112.25-.25zm1-.5c0 .414.336.75.75.75s.75-.336.75-.75-.336-.75-.75-.75-.75.336-.75.75zm-6.471-2.264c.82.157 2.155.248 3.471.248s2.65-.092 3.471-.248c0 0-.37-.913-.815-1.571-.101-.149-.258-.251-.435-.283-.756-.136-1.418-.179-2.221-.179-.803 0-1.465.043-2.22.179-.177.032-.334.134-.435.283-.445.658-.816 1.571-.816 1.571z"/></svg>
+                    </div>
+                    <!-- Borne de recharge -->
+                    <div class="icon-item">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 118.09 122.88" fill="#22c55e"><path fill-rule="evenodd" d="M105.67,61.11c.31,4.25.94,8.53,1.58,12.78A139.75,139.75,0,0,1,109,89.32c.27,6.75-.53,12.3-2.76,16.22-2.48,4.38-6.51,6.72-12.45,6.51h0c-7.09-.13-11.45-4.11-13.42-11.46-1.27-4.73-1.46-11-.7-18.5.54-5.42,1.36-8.89,1-14.47-.45-6.33-1.57-11.32-3.4-15a11.51,11.51,0,0,0-6.27-6v59.93a8.18,8.18,0,0,1,2.3,1.64,8.41,8.41,0,0,1,2.47,6v6A2.74,2.74,0,0,1,73,122.88H2.74A2.74,2.74,0,0,1,0,120.14v-6a8.42,8.42,0,0,1,2.47-6A8.57,8.57,0,0,1,4,107V14.52A14.54,14.54,0,0,1,18.56,0H56.34A14.63,14.63,0,0,1,70.93,14.59V41c11.36,2.48,14.4,15.65,15.13,26.51.49,7.31-.15,7.2-.94,14.63-.77,7.13-.64,12.88.49,17.09,1.27,4.77,4,7.35,8.24,7.41h.05c3.66.12,6.09-1.22,7.52-3.75,1.69-3,2.28-7.55,2-13.31a139.76,139.76,0,0,0-1.68-14.85c-.66-4.44-1.33-8.91-1.64-13.57h-.92l-.09-5.88c-7-.68-9.64-5.39-9.64-12.16V40h-1a1.65,1.65,0,0,1-1.65-1.65V36.46a1.65,1.65,0,0,1,1.65-1.65h4.89V26.16a2.59,2.59,0,0,1,2.6-2.6h0a2.6,2.6,0,0,1,2.6,2.6v8.65h7.65V26.16a2.6,2.6,0,0,1,2.6-2.6h0a2.6,2.6,0,0,1,2.61,2.6v8.65h5a1.65,1.65,0,0,1,1.65,1.65v1.91A1.65,1.65,0,0,1,116.44,40h-1.29v3.45c0,6.68-2.26,10.66-8.75,11.7v5.94ZM42.21,71.28H49.1a1.81,1.81,0,0,1,1.81,1.81,1.85,1.85,0,0,1-.31,1l-16.41,28a1.8,1.8,0,0,1-3.31-1.3L33.3,83.62l-8.16.14A1.8,1.8,0,0,1,23.32,82a1.71,1.71,0,0,1,.25-.95l16.13-28A1.81,1.81,0,0,1,43,54.23l-.83,17.05ZM21.86,12.54H53.68a6,6,0,0,1,4.24,1.76c.07.08.15.15.22.24a6,6,0,0,1,1.56,4v20.3a6,6,0,0,1-6,6H21.86a6,6,0,0,1-4.23-1.76h0a6,6,0,0,1-1.76-4.24V18.53a6,6,0,0,1,1.76-4.24,2.41,2.41,0,0,1,.24-.21,6,6,0,0,1,4-1.54Zm46.58,98.95H7.26a3,3,0,0,0-.91.62,2.92,2.92,0,0,0-.86,2.07v3.24H70.24v-3.24a3,3,0,0,0-.86-2.07,3,3,0,0,0-.94-.63Z"/></svg>
+                    </div>
+                </div>
+
+                <!-- CTA Text -->
+                <div class="cta-text">
+                    <p>Vous avez (ou envisagez) un <strong>véhicule électrique</strong> ?<br>
+                    <strong>Votre avis compte pour équiper notre parking !</strong></p>
+                </div>
+
+                <!-- Highlight box -->
+                <div class="highlight-box">
+                    <p>Valorisez VOTRE bien immobilier dès maintenant</p>
+                </div>
+
+                <!-- Content row: Benefits + QR -->
+                <div class="content-row">
+                    <!-- Benefits list -->
+                    <div class="benefits-section">
+                        <div class="benefit-item">
+                            <span class="bullet">+</span>
+                            <p class="benefit-text"><strong>+3 à +5 % de valeur ajoutée</strong> estimée pour votre appartement grâce à une copropriété équipée – un atout majeur à la revente ou location.</p>
+                        </div>
+                        <div class="benefit-item">
+                            <span class="bullet">•</span>
+                            <p class="benefit-text"><strong>Recharge à domicile</strong> <span class="benefit-arrow">→</span> adieu les stations publiques chères et contraignantes.</p>
+                        </div>
+                        <div class="benefit-item">
+                            <span class="bullet">•</span>
+                            <p class="benefit-text"><strong>Primes & aides</strong> jusqu'à 50-70 % (programme Advenir, crédit d'impôt, TVA réduite, aides locales).</p>
+                        </div>
+                        <div class="benefit-item">
+                            <span class="bullet">•</span>
+                            <p class="benefit-text"><strong>Solution collective</strong> : effet volume = plus d'opérateurs, offres compétitives, prix partagé + installation plus simple.</p>
+                        </div>
+
+                        <!-- Why wait -->
+                        <div class="why-wait">
+                            <p><strong>Pourquoi attendre ?</strong> L'effet volume rend le projet attractif pour les pros : plus nous sommes nombreux, plus les propositions sont optimisées. C'est l'occasion idéale pour équiper le parking collectivement !</p>
+                        </div>
+                    </div>
+
+                    <!-- QR Section -->
+                    <div class="qr-section">
+                        <div class="qr-container">
+                            <img id="qrCode" src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://irve.example.com&color=1e293b&bgcolor=ffffff&qzone=1" alt="QR Code enquête IRVE">
+                        </div>
+                        <div class="qr-text">
+                            <p><span class="arrow">Scannez</span> pour participer</p>
+                            <p class="qr-url" id="displayUrl">irve.example.com</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="footer">
+                    <p class="footer-text">
+                        Ensemble, passons à l'électrique. Pour votre confort quotidien, la valeur de votre bien, votre portefeuille et la planète.
+                        <span class="footer-icons">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120.96 122.88"><path fill="#22c55e" fill-rule="evenodd" d="M60,111.45c2.83,4.06,3,3.86,4.29,7.68s1.72,5.43-1.21,1.51c-2.74-3.66-3-3.63-6.83-7l-.89.16C19.85,119.57-5.3,102.83,1,51.71,27.8,62,66.4,59.52,60.78,107.58a13.06,13.06,0,0,1-.79,3.87Zm-9.2-8C42.57,84,20,76.71,9.17,63.27c11.46,24.33,18.18,23.5,41.62,40.15Z"/></svg>
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateFlyer() {
+            const coproName = document.getElementById('coproName').value.trim() || 'Votre Copropriété';
+            const siteUrl = document.getElementById('siteUrl').value.trim() || 'https://exemple.fr';
+
+            // Update residence badge
+            document.getElementById('residenceBadge').textContent = coproName;
+
+            // Update QR code
+            const encodedUrl = encodeURIComponent(siteUrl);
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedUrl}&color=1e293b&bgcolor=ffffff&qzone=1`;
+            document.getElementById('qrCode').src = qrUrl;
+
+            // Update display URL (remove protocol for cleaner display)
+            const displayUrl = siteUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+            document.getElementById('displayUrl').textContent = displayUrl;
+        }
+
+        // Update on input change
+        document.getElementById('coproName').addEventListener('input', updateFlyer);
+        document.getElementById('siteUrl').addEventListener('input', updateFlyer);
+
+        // Initial update
+        updateFlyer();
+    </script>
+</body>
+</html>
