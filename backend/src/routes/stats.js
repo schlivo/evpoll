@@ -249,8 +249,13 @@ export function handleExportCSV(req, res) {
     // Convert to CSV
     const escapeCSV = (value) => {
       if (value === null || value === undefined) return '';
-      const str = String(value);
-      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      let str = String(value);
+      // Prevent CSV injection: prefix formula characters with single quote
+      // Excel/LibreOffice interpret =, @, +, - as formula starters
+      if (/^[=@+\-]/.test(str)) {
+        str = "'" + str;
+      }
+      if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes("'")) {
         return `"${str.replace(/"/g, '""')}"`;
       }
       return str;
