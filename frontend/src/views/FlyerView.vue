@@ -257,22 +257,96 @@ const printFlyer = () => {
 
 /* Print styles */
 @page {
-  size: A5 portrait;
+  size: 148mm 210mm; /* A5 exact dimensions */
   margin: 0;
 }
 
 @media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  html, body {
+    width: 148mm !important;
+    height: 210mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
   .flyer-page {
     display: block !important;
     background: white !important;
     padding: 0 !important;
+    margin: 0 !important;
+    width: 148mm !important;
+    height: 210mm !important;
+    overflow: visible !important;
   }
-  .no-print {
+
+  .no-print,
+  .form-panel,
+  .preview-header {
     display: none !important;
   }
+
+  .preview-panel {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
   .flyer {
+    width: 148mm !important;
+    height: 210mm !important;
     box-shadow: none !important;
     margin: 0 !important;
+    padding: 15px 18px !important;
+    overflow: visible !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Force background colors and gradients to print */
+  .residence-badge,
+  .highlight-box {
+    background: #22c55e !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .why-wait {
+    background: #f0fdf4 !important;
+    border-left: 4px solid #22c55e !important;
+  }
+
+  .qr-container {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  /* Ensure SVG colors print */
+  svg path[fill="#22c55e"],
+  .icon-item svg {
+    fill: #22c55e !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .highlight,
+  .bullet,
+  .benefit-arrow,
+  .qr-url,
+  .qr-text .arrow {
+    color: #22c55e !important;
+  }
+
+  /* Footer visibility */
+  .footer {
+    position: relative !important;
+    margin-top: auto !important;
+    padding-top: 8px !important;
   }
 }
 
