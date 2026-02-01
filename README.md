@@ -48,8 +48,6 @@ L'application est conçue pour être simple à déployer et ne nécessite aucun 
   </tr>
 </table>
 
-> 💡 **Démo en ligne** : [irve.example.com](https://irve.example.com) | [Dashboard admin](https://irve.example.com/admin) | [Générateur de flyer](https://irve.example.com/flyer.html)
-
 ## Fonctionnalités
 
 ### Pour les résidents
