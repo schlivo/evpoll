@@ -196,6 +196,8 @@ CORS_ORIGIN=http://localhost:5173
 
 ## Déploiement
 
+> **Guide détaillé OVH** : Voir [docs/DEPLOYMENT_OVH.md](docs/DEPLOYMENT_OVH.md) pour un guide pas-à-pas complet avec VPS OVH, nom de domaine, clé SSH et Let's Encrypt.
+
 ### Option 1 : VPS / Serveur Linux (recommandé)
 
 Cette méthode fonctionne sur tout VPS Linux (Ubuntu, Debian, etc.).
