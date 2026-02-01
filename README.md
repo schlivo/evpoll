@@ -1,6 +1,15 @@
 # Enquête IRVE Copropriété
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
+[![Vue.js](https://img.shields.io/badge/Vue.js-3-4FC08D.svg)](https://vuejs.org/)
+[![Docker](https://img.shields.io/badge/Docker-ready-2496ED.svg)](https://www.docker.com/)
+[![RGPD](https://img.shields.io/badge/RGPD-compliant-blue.svg)](#rgpd)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/schlivo/irve-copro-consult/pulls)
+
 Application web permettant aux copropriétés de sonder leurs résidents sur l'installation de bornes de recharge pour véhicules électriques (IRVE - Infrastructure de Recharge pour Véhicules Électriques).
+
+> **Auto-hébergée, open source, conforme RGPD** - Aucune dépendance cloud, vos données restent chez vous.
 
 ## Objectif
 
@@ -12,6 +21,21 @@ Ce projet permet au conseil syndical d'une copropriété de :
 - **Respecter** le RGPD avec une solution auto-hébergée en France
 
 L'application est conçue pour être simple à déployer et ne nécessite aucun service tiers (pas de Google Analytics, pas de cookies tiers, pas de dépendance cloud).
+
+## Aperçu
+
+<table>
+  <tr>
+    <td align="center"><strong>Formulaire d'enquête</strong></td>
+    <td align="center"><strong>Dashboard admin</strong></td>
+    <td align="center"><strong>Générateur de flyer</strong></td>
+  </tr>
+  <tr>
+    <td><em>Capture à venir</em></td>
+    <td><em>Capture à venir</em></td>
+    <td><em>Capture à venir</em></td>
+  </tr>
+</table>
 
 ## Fonctionnalités
 
@@ -594,3 +618,16 @@ Les contributions sont les bienvenues ! N'hésitez pas à :
 3. Commit vos changements (`git commit -m 'Ajout d'une fonctionnalité'`)
 4. Push sur la branche (`git push origin feature/amelioration`)
 5. Ouvrir une Pull Request
+
+---
+
+## Soutenir le projet
+
+Si cet outil vous aide à lancer votre projet IRVE en copropriété, un petit geste me motive à continuer !
+
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa.svg)](https://github.com/sponsors/schlivo)
+
+Vous pouvez aussi contribuer en :
+- Partageant le projet avec d'autres copropriétés
+- Signalant des bugs ou proposant des améliorations
+- Ajoutant une étoile au repo
