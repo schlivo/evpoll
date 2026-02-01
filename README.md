@@ -48,6 +48,16 @@ L'application est conçue pour être simple à déployer et ne nécessite aucun 
   </tr>
 </table>
 
+### Démo en ligne
+
+Testez l'application sur notre instance de démonstration :
+
+| Lien | Description |
+|------|-------------|
+| [demo.evpoll.app](https://demo.evpoll.app) | Site de démonstration |
+| [demo.evpoll.app/admin](https://demo.evpoll.app/admin) | Dashboard administrateur |
+| [demo.evpoll.app/flyer.html](https://demo.evpoll.app/flyer.html) | Générateur de flyer |
+
 ## Fonctionnalités
 
 ### Pour les résidents
