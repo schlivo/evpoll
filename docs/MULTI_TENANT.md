@@ -80,6 +80,19 @@ mkdir -p data
 
 ### Créer le fichier de configuration PM2
 
+> **Pourquoi `ecosystem.config.cjs` et pas `.env` ?**
+>
+> Node.js ne charge **pas** automatiquement les fichiers `.env`. Il faudrait ajouter
+> le package `dotenv` comme dépendance. On utilise plutôt `ecosystem.config.cjs` car :
+>
+> - ✅ Pas de dépendance npm supplémentaire
+> - ✅ PM2 gère nativement les variables d'environnement
+> - ✅ Configuration explicite par instance
+> - ✅ Fichier `.cjs` (CommonJS) requis car PM2 ne supporte pas ESM pour les configs
+>
+> ⚠️ **Sécurité** : Ne commitez jamais ce fichier dans git (contient le mot de passe admin).
+> Ajoutez `ecosystem.config.cjs` à votre `.gitignore`.
+
 Créez `/var/www/evpoll-nouveau-client/backend/ecosystem.config.cjs` :
 
 ```javascript
