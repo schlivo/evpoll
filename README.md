@@ -198,6 +198,8 @@ CORS_ORIGIN=http://localhost:5173
 ## Déploiement
 
 > **Guide détaillé OVH** : Voir [docs/DEPLOYMENT_OVH.md](docs/DEPLOYMENT_OVH.md) pour un guide pas-à-pas complet avec VPS OVH, nom de domaine, clé SSH et Let's Encrypt.
+>
+> **Multi-tenant** : Voir [docs/MULTI_TENANT.md](docs/MULTI_TENANT.md) pour héberger plusieurs copropriétés sur un même serveur.
 
 ### Option 1 : VPS / Serveur Linux (recommandé)
 
