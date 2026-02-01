@@ -63,6 +63,7 @@ Testez l'application sur notre instance de démonstration :
 ### Pour les résidents
 - **Pages informatives** : Comprendre les IRVE, options techniques, aides financières, FAQ
 - **Formulaire d'enquête** : Multi-étapes, responsive, accessible
+- **Expérience mobile optimisée** : Interface type X.com avec header/navigation auto-masquants au scroll et bouton d'action flottant (FAB)
 - **Transparence RGPD** : Politique de confidentialité accessible
 
 ### Pour le conseil syndical

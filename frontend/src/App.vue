@@ -41,10 +41,13 @@ const scrollContainer = ref(null)
 const isScrolling = ref(false)
 const lastScrollTop = ref(0)
 const headerHidden = ref(false)
+const bottomNavHidden = ref(false)
 const scrollAnimationId = ref(null)
 const scrollEndTimeout = ref(null)
 const lastScrollTime = ref(0)
 const scrollVelocity = ref(0)
+const scrollDirectionCheckpoint = ref(0)
+const SCROLL_THRESHOLD = 10 // Minimum scroll distance to trigger hide/show
 
 /** Ease-in-out cubic for smooth start/end. */
 const easeInOutCubic = (t) =>
@@ -199,6 +202,30 @@ const handleScroll = () => {
   const timeDelta = now - lastScrollTime.value
   if (timeDelta > 0) {
     scrollVelocity.value = (scrollTop - lastScrollTop.value) / timeDelta
+  }
+
+  // X.com-like header/bottom nav behavior
+  // Scroll DOWN (reading content, scrollTop increases) = hide header/bottom nav
+  // Scroll UP (going back, scrollTop decreases) = show header (slides down), show bottom nav
+  const scrollDelta = scrollTop - scrollDirectionCheckpoint.value
+
+  if (Math.abs(scrollDelta) > SCROLL_THRESHOLD) {
+    if (scrollDelta > 0 && scrollTop > 80) {
+      // Scrolling DOWN (content going up) - hide header and fade bottom nav
+      headerHidden.value = true
+      bottomNavHidden.value = true
+    } else if (scrollDelta < 0) {
+      // Scrolling UP (content going down) - show header with slide-down, show bottom nav
+      headerHidden.value = false
+      bottomNavHidden.value = false
+    }
+    scrollDirectionCheckpoint.value = scrollTop
+  }
+
+  // Always show header at very top of page
+  if (scrollTop < 50) {
+    headerHidden.value = false
+    bottomNavHidden.value = false
   }
 
   lastScrollTime.value = now
@@ -365,7 +392,7 @@ onUnmounted(() => {
     </div>
 
     <!-- Mobile bottom navigation -->
-    <nav class="mobile-bottom-nav" v-if="!isEnqueteOpen && !isPrivacyOpen">
+    <nav class="mobile-bottom-nav" :class="{ 'nav-hidden': bottomNavHidden }" v-if="!isEnqueteOpen && !isPrivacyOpen">
       <button
         v-for="(section, index) in sections"
         :key="section.id"
@@ -376,11 +403,18 @@ onUnmounted(() => {
         <SvgIcon :name="section.icon" :size="22" />
         <span class="bottom-nav-label">{{ section.label }}</span>
       </button>
-      <button class="bottom-nav-item bottom-nav-cta" @click="openEnquete">
-        <SvgIcon name="clipboard" :size="22" />
-        <span class="bottom-nav-label">Participer</span>
-      </button>
     </nav>
+
+    <!-- Floating Action Button (FAB) for survey - X.com style -->
+    <button
+      class="fab"
+      :class="{ 'fab-lowered': bottomNavHidden }"
+      v-if="!isEnqueteOpen && !isPrivacyOpen"
+      @click="openEnquete"
+      aria-label="Participer à l'enquête"
+    >
+      <SvgIcon name="edit" :size="24" />
+    </button>
 
     <!-- Enquete modal -->
     <Transition name="modal">
@@ -1105,6 +1139,8 @@ html, body {
     padding-bottom: env(safe-area-inset-bottom, 0);
     z-index: 100;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .bottom-nav-item {
@@ -1180,6 +1216,56 @@ html, body {
   /* Cacher l'indicateur de scroll sur mobile car on a la bottom nav */
   .scroll-indicator {
     display: none;
+  }
+
+  /* Bottom nav hidden state - X.com style fade */
+  .mobile-bottom-nav.nav-hidden {
+    opacity: 0;
+    transform: translateY(100%);
+    pointer-events: none;
+  }
+}
+
+/* ===== Floating Action Button (FAB) - X.com style ===== */
+.fab {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .fab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    bottom: calc(80px + env(safe-area-inset-bottom, 0));
+    right: 1rem;
+    width: 56px;
+    height: 56px;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4), 0 2px 4px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    z-index: 105;
+    transition: bottom 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                background 0.2s ease,
+                transform 0.2s ease,
+                box-shadow 0.2s ease;
+  }
+
+  .fab:hover {
+    background: var(--color-primary-dark);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5), 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .fab:active {
+    transform: scale(0.95);
+  }
+
+  /* FAB moves down when bottom nav is hidden */
+  .fab.fab-lowered {
+    bottom: calc(1.5rem + env(safe-area-inset-bottom, 0));
   }
 }
 </style>
