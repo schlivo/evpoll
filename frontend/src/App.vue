@@ -25,6 +25,23 @@ const sections = [
 const currentSection = ref(0)
 const isEnqueteOpen = ref(false)
 const isPrivacyOpen = ref(false)
+const coproName = ref('')
+
+// Fetch copro config on mount
+const fetchConfig = async () => {
+  try {
+    const response = await fetch('/api/config')
+    if (response.ok) {
+      const config = await response.json()
+      coproName.value = config.copro_name || ''
+    }
+  } catch (error) {
+    console.error('Failed to load config:', error)
+  }
+}
+
+// Provide coproName to children
+provide('coproName', coproName)
 
 const openPrivacy = () => {
   isPrivacyOpen.value = true
@@ -298,6 +315,7 @@ const handleKeydown = (e) => {
 }
 
 onMounted(() => {
+  fetchConfig()
   window.addEventListener('keydown', handleKeydown)
   window.addEventListener('hashchange', syncHashToSection)
   // Initial hash: scroll to section after DOM is ready
@@ -324,7 +342,7 @@ onUnmounted(() => {
   <div v-else class="app" :class="{ 'enquete-open': isEnqueteOpen }">
     <!-- Minimal sticky header -->
     <header class="mobile-header" :class="{ 'header-hidden': headerHidden }" v-if="!isEnqueteOpen && !isPrivacyOpen">
-      <span class="mobile-header-title">Enquête IRVE</span>
+      <span class="mobile-header-title">{{ coproName || 'Enquête IRVE' }}</span>
       <div class="mobile-header-actions">
         <button
           class="mobile-header-privacy"
