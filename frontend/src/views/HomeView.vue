@@ -4,6 +4,7 @@ import StatCard from '../components/StatCard.vue'
 import SvgIcon from '../components/SvgIcon.vue'
 
 const navigateToSection = inject('navigateToSection')
+const coproName = inject('coproName')
 
 const stats = ref({
   total_responses: 0,
@@ -40,6 +41,7 @@ const evCount = () => {
   <div class="page">
     <section class="hero">
       <div class="container">
+        <p v-if="coproName" class="hero-copro-name">{{ coproName }}</p>
         <h1>Bornes de recharge électrique</h1>
         <p class="hero-subtitle">
           Participez à l'enquête sur l'installation d'infrastructures de recharge
@@ -182,6 +184,19 @@ const evCount = () => {
   background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-bg) 100%);
   padding: 4rem 0;
   text-align: center;
+}
+
+.hero-copro-name {
+  display: inline-block;
+  background: var(--color-primary);
+  color: white;
+  padding: 0.375rem 1rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .hero h1 {
