@@ -24,18 +24,31 @@ L'application est conçue pour être simple à déployer et ne nécessite aucun 
 
 ## Aperçu
 
+<p align="center">
+  <img src="docs/screenshots/main.png" alt="Page d'accueil IRVE" width="300"/>
+</p>
+
 <table>
   <tr>
-    <td align="center"><strong>Formulaire d'enquête</strong></td>
-    <td align="center"><strong>Dashboard admin</strong></td>
-    <td align="center"><strong>Générateur de flyer</strong></td>
-  </tr>
-  <tr>
-    <td><em>Capture à venir</em></td>
-    <td><em>Capture à venir</em></td>
-    <td><em>Capture à venir</em></td>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/formulaire-mobile.png" alt="Formulaire d'enquête" width="250"/><br/>
+      <strong>Formulaire d'enquête</strong><br/>
+      <sub>Multi-étapes, responsive</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/admin-dashboard.png" alt="Dashboard admin" width="250"/><br/>
+      <strong>Dashboard admin</strong><br/>
+      <sub>Statistiques temps réel</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/flyer-generator.png" alt="Générateur de flyer" width="250"/><br/>
+      <strong>Générateur de flyer</strong><br/>
+      <sub>QR code, export PDF</sub>
+    </td>
   </tr>
 </table>
+
+> 💡 **Démo en ligne** : [irve.example.com](https://irve.example.com) | [Dashboard admin](https://irve.example.com/admin) | [Générateur de flyer](https://irve.example.com/flyer.html)
 
 ## Fonctionnalités
 
