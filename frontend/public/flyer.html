@@ -162,6 +162,40 @@
             margin-bottom: 4px;
         }
 
+        /* Print options */
+        .print-options {
+            background: #1e293b;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #22c55e;
+            cursor: pointer;
+        }
+
+        .checkbox-text {
+            color: #e2e8f0;
+            font-weight: 500;
+        }
+
+        .print-options small {
+            display: block;
+            margin-top: 6px;
+            margin-left: 28px;
+        }
+
         /* Preview Panel */
         .preview-panel {
             display: flex;
@@ -184,6 +218,15 @@
         @page {
             size: A5 portrait;
             margin: 0;
+        }
+
+        /* Mode 2 par page A4 - preview */
+        body.print-two-per-page .preview-panel {
+            flex-direction: row;
+            gap: 10px;
+        }
+        body.print-two-per-page .flyer-duplicate {
+            display: none;
         }
 
         @media print {
@@ -212,6 +255,33 @@
             body {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
+            }
+
+            /* Mode 2 par page A4 paysage */
+            body.print-two-per-page {
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            body.print-two-per-page .preview-panel {
+                display: flex !important;
+                flex-direction: row !important;
+                gap: 0 !important;
+                justify-content: center !important;
+                align-items: flex-start !important;
+            }
+            body.print-two-per-page .flyer {
+                width: 148mm !important;
+                height: 210mm !important;
+                flex-shrink: 0 !important;
+            }
+            body.print-two-per-page .flyer-duplicate {
+                display: flex !important;
+            }
+        }
+
+        @media print and (prefers-color-scheme: light) {
+            body.print-two-per-page {
+                /* Force A4 landscape for 2-up printing */
             }
         }
 
@@ -524,7 +594,15 @@
                 Mettre à jour
             </button>
 
-            <button class="btn btn-secondary" onclick="window.print()">
+            <div class="form-group print-options">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="twoPerPage" onchange="toggleTwoPerPage()">
+                    <span class="checkbox-text">2 flyers par page A4</span>
+                </label>
+                <small>Imprime 2 exemplaires A5 côte à côte sur une feuille A4 paysage</small>
+            </div>
+
+            <button class="btn btn-secondary" onclick="printFlyer()">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z"/>
                 </svg>
@@ -534,9 +612,10 @@
             <div class="divider"></div>
 
             <div class="tips">
-                <h3>Conseils</h3>
+                <h3>Conseils d'impression</h3>
                 <ul>
-                    <li>Format d'impression : A5 portrait</li>
+                    <li><strong>1 par page</strong> : A5 portrait (148 × 210 mm)</li>
+                    <li><strong>2 par page</strong> : A4 paysage (2 × A5 côte à côte)</li>
                     <li>Utilisez "Enregistrer en PDF" pour un fichier numérique</li>
                     <li>Imprimez en couleur pour un meilleur rendu</li>
                     <li>Testez le QR code avant distribution</li>
@@ -694,6 +773,65 @@
     </div>
 
     <script>
+        // Dynamic page size style element
+        let pageStyleElement = null;
+
+        function toggleTwoPerPage() {
+            const twoPerPage = document.getElementById('twoPerPage').checked;
+            if (twoPerPage) {
+                document.body.classList.add('print-two-per-page');
+            } else {
+                document.body.classList.remove('print-two-per-page');
+            }
+            updatePageStyle();
+        }
+
+        function updatePageStyle() {
+            const twoPerPage = document.getElementById('twoPerPage').checked;
+
+            // Remove existing style if any
+            if (pageStyleElement) {
+                pageStyleElement.remove();
+            }
+
+            // Create new style element with appropriate page size
+            pageStyleElement = document.createElement('style');
+            if (twoPerPage) {
+                pageStyleElement.textContent = '@page { size: A4 landscape; margin: 0; }';
+            } else {
+                pageStyleElement.textContent = '@page { size: A5 portrait; margin: 0; }';
+            }
+            document.head.appendChild(pageStyleElement);
+        }
+
+        function printFlyer() {
+            const twoPerPage = document.getElementById('twoPerPage').checked;
+            updatePageStyle();
+
+            // Remove any existing clone
+            const existingClone = document.getElementById('flyerClone');
+            if (existingClone) {
+                existingClone.remove();
+            }
+
+            if (twoPerPage) {
+                // Clone the flyer for 2-per-page printing
+                const flyer = document.getElementById('flyer');
+                const clone = flyer.cloneNode(true);
+                clone.id = 'flyerClone';
+                clone.classList.add('flyer-duplicate');
+                flyer.parentNode.insertBefore(clone, flyer.nextSibling);
+            }
+
+            window.print();
+
+            // Clean up clone after printing
+            setTimeout(() => {
+                const clone = document.getElementById('flyerClone');
+                if (clone) clone.remove();
+            }, 1000);
+        }
+
         function updateFlyer() {
             const coproName = document.getElementById('coproName').value.trim() || 'Votre Copropriété';
             const siteUrl = document.getElementById('siteUrl').value.trim() || window.location.origin;
