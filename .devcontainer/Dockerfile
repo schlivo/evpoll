@@ -1,4 +1,4 @@
-FROM node:20-bookworm
+FROM node:22-bookworm
 
 # Install build dependencies for native modules (better-sqlite3)
 RUN apt-get update && apt-get install -y \
