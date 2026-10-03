@@ -1,8 +1,23 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import SvgIcon from '../components/SvgIcon.vue'
 
 const openItems = ref([])
+const contactEmail = ref('conseil.syndical@copropriete.fr')
+const syndicEmail = ref('syndic@gestionnaire.fr')
+
+// Per-instance contacts come from the backend (CONTACT_EMAIL / SYNDIC_EMAIL);
+// the literals above are only the fallback if /api/config is unreachable.
+onMounted(async () => {
+  try {
+    const response = await fetch('/api/config')
+    const config = await response.json()
+    contactEmail.value = config.contact_email || contactEmail.value
+    syndicEmail.value = config.syndic_email || syndicEmail.value
+  } catch (error) {
+    console.error('Failed to load config:', error)
+  }
+})
 
 const toggleItem = (index) => {
   const idx = openItems.value.indexOf(index)
@@ -105,11 +120,11 @@ const faqItems = [
           <div class="contact-info">
             <div class="contact-item">
               <strong>Conseil syndical</strong>
-              <span>conseil.syndical@copropriete.fr</span>
+              <a :href="'mailto:' + contactEmail">{{ contactEmail }}</a>
             </div>
             <div class="contact-item">
               <strong>Syndic</strong>
-              <span>syndic@gestionnaire.fr</span>
+              <a :href="'mailto:' + syndicEmail">{{ syndicEmail }}</a>
             </div>
           </div>
         </div>
