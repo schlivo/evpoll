@@ -212,7 +212,7 @@ Cette méthode fonctionne sur tout VPS Linux (Ubuntu, Debian, etc.).
 sudo apt update && sudo apt upgrade -y
 
 # Installer Node.js 20
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt install -y nodejs
 
 # Installer PM2 (gestionnaire de processus)
@@ -447,7 +447,7 @@ Pour héberger sur un Raspberry Pi, NAS Synology, ou serveur personnel.
 
 ```bash
 # Installer Node.js
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt install -y nodejs
 
 # Suivre ensuite les étapes de l'Option 1

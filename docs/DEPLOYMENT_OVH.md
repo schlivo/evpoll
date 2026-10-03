@@ -144,7 +144,7 @@ sudo systemctl restart ssh
 
 ```bash
 # Installer Node.js 20 LTS
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt install -y nodejs
 
 # Vérifier l'installation
