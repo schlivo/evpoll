@@ -1,6 +1,9 @@
 // Settings editable from the admin page (deadline, signature, contacts, data controller,
 // legal notice...). Precedence: value saved in the admin > environment variable >
-// instance files > built-in default. Clearing a field in the admin returns to its default.
+// instance files > built-in default. Clearing a field in the admin returns to its default;
+// "-" saves an explicit empty value (to hide a default).
+const EXPLICIT_EMPTY = '-';
+const effective = (saved) => (saved === EXPLICIT_EMPTY ? '' : saved);
 import db, { logAuditEvent } from './db.js';
 import { CAMPAIGN, PRIVACY, TEXTS, LEGAL } from './config.js';
 
@@ -60,13 +63,13 @@ export function getSetting(key) {
   const setting = BY_KEY.get(key);
   if (!setting) throw new Error(`Unknown setting ${key}`);
   const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
-  return row ? row.value : defaultOf(setting);
+  return row ? effective(row.value) : defaultOf(setting);
 }
 
 /** Every effective value, as { key: value } */
 export function getEffectiveSettings() {
   const saved = savedValues();
-  return Object.fromEntries(SETTINGS.map(s => [s.key, s.key in saved ? saved[s.key] : defaultOf(s)]));
+  return Object.fromEntries(SETTINGS.map(s => [s.key, s.key in saved ? effective(saved[s.key]) : defaultOf(s)]));
 }
 
 /** Admin view: definition, saved value and default of each setting */
@@ -99,8 +102,8 @@ export function updateSettings(changes, clientIP) {
     }
     const value = raw === null || raw === undefined ? '' : String(raw).trim();
     if (value.length > MAX_LENGTH) errors.push(`${setting.label} : ${MAX_LENGTH} caractères maximum`);
-    else if (value && setting.type === 'email' && !isEmail(value)) errors.push(`${setting.label} : adresse e-mail invalide`);
-    else if (value && setting.type === 'date' && !isDate(value)) errors.push(`${setting.label} : date invalide (AAAA-MM-JJ)`);
+    else if (value && value !== EXPLICIT_EMPTY && setting.type === 'email' && !isEmail(value)) errors.push(`${setting.label} : adresse e-mail invalide`);
+    else if (value && value !== EXPLICIT_EMPTY && setting.type === 'date' && !isDate(value)) errors.push(`${setting.label} : date invalide (AAAA-MM-JJ)`);
     else toSave.push([key, value]);
   }
   if (errors.length) return { errors };

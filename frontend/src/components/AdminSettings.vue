@@ -78,7 +78,7 @@ onMounted(load)
     <h3>Réglages du site</h3>
     <p class="hint">
       Valeurs affichées sur le site et sur les documents. Un champ vide reprend la valeur par défaut
-      (fichier d'environnement ou configuration de l'instance), indiquée sous le champ.
+      (fichier d'environnement ou configuration de l'instance), indiquée sous le champ ; « - » force un champ vide.
     </p>
 
     <form @submit.prevent="save">
