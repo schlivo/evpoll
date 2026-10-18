@@ -25,28 +25,30 @@ L'application est conçue pour être simple à déployer et ne nécessite aucun 
 ## Aperçu
 
 <p align="center">
-  <img src="docs/screenshots/main.png" alt="Page d'accueil IRVE" width="300"/>
+  <img src="docs/screenshots/main.png" alt="Page d'accueil : participation et plan du parking" width="640"/>
 </p>
 
 <table>
   <tr>
     <td align="center" width="33%">
-      <img src="docs/screenshots/formulaire-mobile.png" alt="Formulaire d'enquête" width="250"/><br/>
-      <strong>Formulaire d'enquête</strong><br/>
-      <sub>Multi-étapes, responsive</sub>
+      <img src="docs/screenshots/formulaire-mobile.png" alt="Réponse express sur mobile" width="200"/><br/>
+      <strong>Réponse express</strong><br/>
+      <sub>Sa place sur le plan, deux questions</sub>
     </td>
     <td align="center" width="33%">
-      <img src="docs/screenshots/admin-dashboard.png" alt="Dashboard admin" width="250"/><br/>
-      <strong>Dashboard admin</strong><br/>
-      <sub>Statistiques temps réel</sub>
+      <img src="docs/screenshots/admin-dashboard.png" alt="Admin : plan coloré par réponse" width="250"/><br/>
+      <strong>Suivi admin</strong><br/>
+      <sub>Plan coloré par réponse, une réponse par lot</sub>
     </td>
     <td align="center" width="33%">
-      <img src="docs/screenshots/flyer-generator.png" alt="Générateur de flyer" width="250"/><br/>
-      <strong>Générateur de flyer</strong><br/>
-      <sub>QR code, export PDF</sub>
+      <img src="docs/screenshots/flyer-generator.png" alt="Documents de campagne" width="250"/><br/>
+      <strong>Documents de campagne</strong><br/>
+      <sub>Note A4, flyer A5, papillons A6 par lot, QR code et code</sub>
     </td>
   </tr>
 </table>
+
+<sub>Captures de l'instance de démonstration (`instances/demo`). Autres vues : `docs/screenshots/2026-10/`.</sub>
 
 ### Démo en ligne
 
@@ -56,7 +58,7 @@ Testez l'application sur notre instance de démonstration :
 |------|-------------|
 | [demo.evpoll.app](https://demo.evpoll.app) | Site de démonstration |
 | [demo.evpoll.app/admin](https://demo.evpoll.app/admin) | Dashboard administrateur |
-| [demo.evpoll.app/flyer.html](https://demo.evpoll.app/flyer.html) | Générateur de flyer |
+| [demo.evpoll.app/flyer.html](https://demo.evpoll.app/flyer.html) | Documents de campagne (note, flyer, papillons, relance) |
 
 ## Fonctionnalités
 
