@@ -33,6 +33,7 @@ provide('coproName', coproName)
 provide('instanceConfig', instanceConfig)
 
 const privacy = computed(() => instanceConfig.value.privacy || {})
+const legal = computed(() => instanceConfig.value.legal || {})
 const retentionText = computed(() => {
   const days = privacy.value.retention_days || 730
   return days % 365 === 0 ? `${days / 365} an${days >= 730 ? 's' : ''}` : `${days} jours`
@@ -230,16 +231,34 @@ onUnmounted(() => {
       aria-labelledby="privacy-title"
     >
       <div class="privacy-modal-header">
-        <h2 id="privacy-title">Politique de confidentialité</h2>
+        <h2 id="privacy-title">Mentions légales et confidentialité</h2>
         <button ref="privacyCloseButton" type="button" class="privacy-close" @click="closePrivacy">
           Fermer <span aria-hidden="true">✕</span>
         </button>
       </div>
       <div class="privacy-modal-content">
         <div class="privacy-section">
+          <h3>Mentions légales</h3>
+          <p>
+            <strong>Éditeur :</strong>
+            <template v-if="legal.publisher">{{ legal.publisher }}</template>
+            <template v-else>particulier non professionnel, identité communiquée à l'hébergeur (LCEN, art. 6-III-2)</template>
+          </p>
+          <p v-if="legal.publication_director"><strong>Directeur de la publication :</strong> {{ legal.publication_director }}</p>
+          <p v-if="legal.publisher_contact || instanceConfig.contact_email">
+            <strong>Contact :</strong>
+            <template v-if="legal.publisher_contact">{{ legal.publisher_contact }}</template>
+            <a v-else :href="'mailto:' + instanceConfig.contact_email">{{ instanceConfig.contact_email }}</a>
+          </p>
+          <p v-if="legal.host_name">
+            <strong>Hébergeur :</strong> {{ legal.host_name }}<template v-if="legal.host_address"> – {{ legal.host_address }}</template><template v-if="legal.host_phone"> – {{ legal.host_phone }}</template>
+          </p>
+        </div>
+
+        <div class="privacy-section">
           <h3>Responsable du traitement</h3>
           <p v-if="privacy.controller">{{ privacy.controller }}</p>
-          <p v-else class="privacy-missing">[Responsable du traitement à compléter dans la configuration de l'instance]</p>
+          <p v-else class="privacy-missing">[Responsable du traitement à compléter dans les réglages de l'admin]</p>
           <p v-if="instanceConfig.contact_email">Contact : <a :href="'mailto:' + instanceConfig.contact_email">{{ instanceConfig.contact_email }}</a></p>
         </div>
 

@@ -234,5 +234,14 @@
     "plan_caption": "Résidence Démo – sous-sol",
     "paper_contact": ""
   },
-  "_texts_comment": "texts : tous facultatifs. paper_contact = contact affiché dans « Pas de smartphone ? » (défaut : CONTACT_EMAIL)."
+  "_texts_comment": "texts : tous facultatifs. paper_contact = contact affiché dans « Pas de smartphone ? » (défaut : CONTACT_EMAIL).",
+  "legal": {
+    "publisher": "",
+    "publication_director": "",
+    "publisher_contact": "",
+    "host_name": "",
+    "host_address": "",
+    "host_phone": ""
+  },
+  "_legal_comment": "legal : mentions légales (LCEN). Particulier : nom facultatif ; adresse et téléphone = ceux de l'hébergeur. Tout est aussi modifiable dans l'admin (Réglages du site)."
 }

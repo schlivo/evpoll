@@ -9,7 +9,8 @@ import surveyRouter from './routes/survey.js';
 import statsRouter, { handleExportCSV } from './routes/stats.js';
 import { globalLimiter } from './middleware/rateLimiter.js';
 import { CAMPAIGN_KEY_REQUIRED, normalizeKey } from './campaign.js';
-import { COPRO, BUILDINGS, BUILDINGS_QUESTION, PARKING_SPOTS, LOTS, CAMPAIGN, PRIVACY, TEXTS, loadParkingPlan } from './config.js';
+import { getEffectiveSettings } from './settings.js';
+import { COPRO, BUILDINGS, BUILDINGS_QUESTION, PARKING_SPOTS, LOTS, PRIVACY, TEXTS, loadParkingPlan } from './config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -71,10 +72,8 @@ app.get('/api/health', (req, res) => {
 
 // Public config endpoint (non-sensitive configuration for frontend)
 app.get('/api/config', (req, res) => {
-  // Example addresses from .env.example must never reach respondents
-  const configured = (value, example) => !!value && value.trim().toLowerCase() !== example;
-  const contactConfigured = configured(process.env.CONTACT_EMAIL, 'conseil-syndical@exemple.fr');
-  const syndicConfigured = configured(process.env.SYNDIC_EMAIL, 'syndic@exemple.fr');
+  // Admin settings > environment > instance files (example addresses never reach respondents)
+  const settings = getEffectiveSettings();
   res.json({
     copro_name: COPRO.name,
     copro_address: COPRO.address,
@@ -91,15 +90,28 @@ app.get('/api/config', (req, res) => {
     multi_spot_lots: LOTS.filter(l => l.places.length > 1),
     // Full lot table (single lots included) for "Place 82 · lot n°144 · place simple"
     lots: LOTS,
-    contact_email: contactConfigured ? process.env.CONTACT_EMAIL.trim() : '',
-    contact_configured: contactConfigured,
-    syndic_email: syndicConfigured ? process.env.SYNDIC_EMAIL.trim() : '',
-    syndic_configured: syndicConfigured,
-    privacy: PRIVACY,
-    texts: TEXTS,
+    contact_email: settings.contact_email,
+    contact_configured: !!settings.contact_email,
+    syndic_email: settings.syndic_email,
+    syndic_configured: !!settings.syndic_email,
+    privacy: { ...PRIVACY, controller: settings.data_controller },
+    texts: {
+      ...TEXTS,
+      hero_kicker: settings.hero_kicker,
+      hero_title: settings.hero_title,
+      paper_contact: settings.paper_contact
+    },
+    legal: {
+      publisher: settings.publisher,
+      publication_director: settings.publication_director,
+      publisher_contact: settings.publisher_contact,
+      host_name: settings.host_name,
+      host_address: settings.host_address,
+      host_phone: settings.host_phone
+    },
     // Campaign defaults for the flyer generator (editable there)
-    campaign_deadline: CAMPAIGN.deadline,
-    campaign_signature: CAMPAIGN.signature,
+    campaign_deadline: settings.campaign_deadline,
+    campaign_signature: settings.campaign_signature,
     // The survey then asks for the code printed on the documents
     campaign_key_required: CAMPAIGN_KEY_REQUIRED
   });

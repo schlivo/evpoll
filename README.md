@@ -198,6 +198,9 @@ CORS_ORIGIN=http://localhost:5173
 | `CAMPAIGN_KEY_REQUIRED` | Non | `1` : une réponse en ligne doit porter un code imprimé (clé de campagne de la note / du flyer / de l'affiche, ou code de place du papillon). Défaut : facultatif |
 | `RATE_KEYED_ANSWERS_PER_HOUR` | Non | Plafond par IP des réponses portant la clé de campagne (défaut 200) ; aucune limite par IP avec un code de place valide |
 | `RATE_API_PER_MINUTE` / `RATE_EDITS_PER_HOUR` | Non | Plafonds par IP des appels API (défaut 600) et des modifications par jeton (défaut 60) |
+| `PUBLISHER`, `PUBLICATION_DIRECTOR`, `PUBLISHER_CONTACT` | Non | Mentions légales : éditeur (particulier : nom facultatif), directeur de la publication, contact |
+| `HOST_NAME`, `HOST_ADDRESS`, `HOST_PHONE` | Non | Mentions légales : hébergeur (nom, adresse, téléphone de l'hébergeur, pas de l'éditeur) |
+| `HERO_KICKER`, `HERO_TITLE`, `PAPER_CONTACT` | Non | Accroche et titre du bandeau, contact « Pas de smartphone ? » |
 | `PARKING_CONFIG` | Non | Fichier JSON décrivant la copro physique (entrées, escaliers, lots/places) |
 | `PARKING_SPOTS` | Non | Nombre de places (numérotées 1..N) si pas d'instance |
 | `DATA_CONTROLLER` | Non | Responsable du traitement affiché dans la notice RGPD |
@@ -206,6 +209,13 @@ CORS_ORIGIN=http://localhost:5173
 | `IP_HASH_SECRET` | Non | Clé HMAC de l'empreinte d'IP des réponses (indicateur « même IP »). Sinon, clé aléatoire générée une fois et gardée en base (table `meta`) |
 | `IP_HASH_RETENTION_DAYS` | Non | Conservation de l'empreinte d'IP en jours (défaut 30), purge quotidienne, affichée dans la notice |
 | `CAMPAIGN_DEADLINE` | Non | Date limite (AAAA-MM-JJ) : le jeton de modification reste valable jusqu'à la fin de ce jour (sinon 30 jours) |
+
+### Réglages modifiables dans l'admin
+
+La date limite, la signature, les e-mails de contact, le responsable du traitement, les mentions légales
+et les textes du bandeau se modifient dans l'admin (« Réglages du site »), sans redémarrage. Ordre de
+priorité : valeur enregistrée dans l'admin > variable d'environnement > fichiers de l'instance > défaut.
+Vider un champ dans l'admin rétablit la valeur par défaut. Chaque modification est journalisée.
 
 ### Socle commun et instance
 

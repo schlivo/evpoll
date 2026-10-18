@@ -11,7 +11,8 @@
 // - answers without a spot are counted apart.
 import crypto from 'crypto';
 import db from './db.js';
-import { LOTS, PARKING_SPOTS, TOTAL_LOTS, CAMPAIGN } from './config.js';
+import { LOTS, PARKING_SPOTS, TOTAL_LOTS } from './config.js';
+import { getSetting } from './settings.js';
 import { extractSpotNumbers, spotsToLots } from './parking.js';
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -270,7 +271,7 @@ export function verifyCode(lotKey, code) {
  * @returns {Date}
  */
 export function editTokenExpiry(createdAt) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(CAMPAIGN.deadline || '');
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(getSetting('campaign_deadline') || '');
   if (match) {
     const end = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 23, 59, 59);
     if (!Number.isNaN(end.getTime())) return end;

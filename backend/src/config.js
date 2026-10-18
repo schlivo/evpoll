@@ -124,6 +124,16 @@ export const PRIVACY = {
 // Short instance texts (footer...) shown by the generic views
 export const TEXTS = instance.texts || {};
 
+// Legal notice (LCEN): publisher and host. Editable in the admin (settings.js)
+export const LEGAL = {
+  publisher: instance.legal?.publisher || '',
+  publication_director: instance.legal?.publication_director || '',
+  publisher_contact: instance.legal?.publisher_contact || '',
+  host_name: instance.legal?.host_name || '',
+  host_address: instance.legal?.host_address || '',
+  host_phone: instance.legal?.host_phone || ''
+};
+
 /**
  * Optional parking plan, INSTANCE_DIR/plan/places.json:
  * { viewBox: [x, y, w, h], places: { "1": [[x, y], ...] }, walls: [[[x, y], [x, y]], ...] }

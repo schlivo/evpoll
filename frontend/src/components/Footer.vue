@@ -17,7 +17,7 @@ const openPrivacy = inject('openPrivacy', () => {})
       <p v-if="instanceConfig.parking_address">Parking : {{ instanceConfig.parking_address }}</p>
       <p v-if="instanceConfig.texts?.footer">{{ instanceConfig.texts.footer }}</p>
       <p class="footer-links">
-        <button type="button" class="footer-link" @click="openPrivacy">Politique de confidentialité</button>
+        <button type="button" class="footer-link" @click="openPrivacy">Mentions légales et confidentialité</button>
       </p>
     </div>
   </footer>

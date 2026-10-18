@@ -10,6 +10,7 @@ import {
 } from '../lots.js';
 import { surveyValidation, toRow, insertAnswer } from './survey.js';
 import { getCampaignKey, rotateCampaignKey, CAMPAIGN_KEY_REQUIRED } from '../campaign.js';
+import { describeSettings, updateSettings } from '../settings.js';
 import { validationResult } from 'express-validator';
 
 const router = Router();
@@ -474,6 +475,18 @@ router.post('/admin/paper', requireAuth, (req, res, next) => {
     console.error('Paper entry error:', error);
     res.status(500).json({ success: false, error: 'Erreur lors de l\'enregistrement' });
   }
+});
+
+// GET /api/stats/admin/settings - Editable settings with their saved value and default
+router.get('/admin/settings', requireAuth, (req, res) => {
+  res.json({ success: true, settings: describeSettings() });
+});
+
+// PUT /api/stats/admin/settings - Save settings ({ key: value }, '' = back to the default)
+router.put('/admin/settings', requireAuth, (req, res) => {
+  const { errors } = updateSettings(req.body?.settings, getClientIP(req));
+  if (errors.length) return res.status(400).json({ success: false, errors });
+  res.json({ success: true, settings: describeSettings() });
 });
 
 // GET /api/stats/admin/campaign-key - Key printed on the generic documents (A4 note, A5, poster)

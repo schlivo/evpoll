@@ -5,6 +5,7 @@ import ParkingPlan from '../components/ParkingPlan.vue'
 import AdminConflicts from '../components/AdminConflicts.vue'
 import AdminPaperEntry from '../components/AdminPaperEntry.vue'
 import AdminCodes from '../components/AdminCodes.vue'
+import AdminSettings from '../components/AdminSettings.vue'
 
 const isAuthenticated = ref(false)
 const password = ref('')
@@ -318,8 +319,8 @@ onMounted(() => {
 
       <div v-if="!contactConfigured" class="config-warning" role="alert">
         <strong>Adresse de contact non configurée.</strong>
-        Définissez <code>CONTACT_EMAIL</code> dans le <code>.env</code> de l'instance : en attendant, aucune adresse
-        n'est affichée aux répondants.
+        Renseignez l'e-mail du conseil syndical dans « Réglages du site » ci-dessous (ou <code>CONTACT_EMAIL</code>
+        dans l'environnement) : en attendant, aucune adresse n'est affichée aux répondants.
       </div>
       <p v-if="exportNotice" class="form-error">{{ exportNotice }}</p>
 
@@ -564,6 +565,7 @@ onMounted(() => {
           </p>
         </section>
 
+        <AdminSettings :token="authToken" @saved="loadSpots" @unauthorized="logout" />
         <AdminConflicts ref="conflictsPanel" :token="authToken" @changed="loadStats" @unauthorized="logout" />
         <AdminPaperEntry :token="authToken" :building-choices="buildingChoices" @saved="refreshAfterChange" @unauthorized="logout" />
         <AdminCodes :token="authToken" @unauthorized="logout" />
