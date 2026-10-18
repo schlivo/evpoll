@@ -135,7 +135,7 @@ puis dans `env` de l'`ecosystem.config.cjs` :
 
 L'instance décrit les escaliers, les lots et places (lots doubles), la campagne (date limite,
 signature), les paramètres de la notice RGPD (responsable du traitement, hébergeur, durées de
-conservation) et, en option, le plan du parking affiché dans l'admin (`plan/parking.json`).
+conservation) et, en option, le plan du parking affiché dans l'admin (`plan/places.json`).
 
 ### Lancer l'instance
 

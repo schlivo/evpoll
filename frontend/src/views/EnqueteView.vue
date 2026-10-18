@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, inject, onMounted, watch } from 'vue'
 import SvgIcon from '../components/SvgIcon.vue'
+import PlanPicker from '../components/PlanPicker.vue'
 import { parkingSpotError } from '../utils/parking.js'
 
 const closeEnquete = inject('closeEnquete')
@@ -19,10 +20,25 @@ const isSubmitted = ref(false)
 const submitError = ref('')
 const configLoading = ref(true)
 const hasExistingSubmission = ref(false)
-const existingSubmissionBuilding = ref('')
-// Set after an express answer so the full form completes it instead of adding a new one
+// Marker of the answer given on this device ({ spots, id, token, token_expires_at })
+const existingMarker = ref(null)
+// Set after an answer (or from the marker) so later edits update it instead of adding a new one
 const editContext = ref(null)
 const lastSubmitWasExpress = ref(false)
+// Answer from the server after submission (conflict, verification)
+const submitResult = ref(null)
+// True while the express form edits an existing answer ("Modifier ma réponse")
+const isEditing = ref(false)
+const editError = ref('')
+
+// Anti-bot: hidden field that people never fill, and time spent on the form
+const honeypot = ref('')
+const formShownAt = ref(Date.now())
+// Place code printed on the windshield flyer (?p=83&c=K7M4QX)
+const placeCode = ref('')
+
+const plan = ref(null)
+const lots = ref([])
 
 // Optional "keep me informed" block on the thank-you screen of an express answer
 const contactForm = ref({ email: '', consent: false })
@@ -55,26 +71,26 @@ const multiSpotLots = ref([])
 const privacy = ref({})
 // Spots for which the respondent answered the "both spots?" question
 const answeredLotPrompts = ref([])
-const contactEmail = ref('conseil-syndical@exemple.fr')
-const syndicEmail = ref('syndic@exemple.fr')
+const contactEmail = ref('')
+const syndicEmail = ref('')
 
 // Storage key for submission marker
 const SUBMISSION_STORAGE_KEY = 'irve_survey_submission'
 
-// Check for existing submission in localStorage
+// Check for an answer already given on this device
 const checkExistingSubmission = () => {
   try {
     const stored = localStorage.getItem(SUBMISSION_STORAGE_KEY)
     if (stored) {
       const data = JSON.parse(stored)
-      // Check if submission was within 30 days
-      const submissionDate = new Date(data.timestamp)
+      const tokenValid = data.token && data.token_expires_at && new Date(data.token_expires_at) > new Date()
+      // Without a valid token the marker only lasts 30 days
       const thirtyDaysAgo = new Date()
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
-      if (submissionDate > thirtyDaysAgo) {
+      if (tokenValid || new Date(data.timestamp) > thirtyDaysAgo) {
         hasExistingSubmission.value = true
-        existingSubmissionBuilding.value = data.building || ''
+        existingMarker.value = data
+        if (tokenValid) editContext.value = { id: data.id, token: data.token }
         return true
       }
     }
@@ -84,19 +100,27 @@ const checkExistingSubmission = () => {
   return false
 }
 
-// Save submission marker to localStorage
-const saveSubmissionMarker = (building) => {
+// Save the submission marker (also read by the home page to light up the spot)
+const saveSubmissionMarker = (data) => {
   try {
-    const data = {
+    const previous = existingMarker.value || {}
+    const marker = {
       timestamp: new Date().toISOString(),
-      building,
+      building: formData.value.building,
+      spots: typedSpots.value,
+      id: data.id ?? previous.id,
+      token: data.edit_token ?? previous.token,
+      token_expires_at: data.edit_token_expires_at ?? previous.token_expires_at,
       submitted: true
     }
-    localStorage.setItem(SUBMISSION_STORAGE_KEY, JSON.stringify(data))
+    localStorage.setItem(SUBMISSION_STORAGE_KEY, JSON.stringify(marker))
+    existingMarker.value = marker
   } catch (e) {
     // localStorage not available, continue without marker
   }
 }
+
+const markerSpotsText = computed(() => (existingMarker.value?.spots || []).join('-'))
 
 // Watch consent checkbox to record timestamp
 watch(() => formData.value.consent_contact, (newValue) => {
@@ -105,15 +129,75 @@ watch(() => formData.value.consent_contact, (newValue) => {
   }
 })
 
-// Allow user to proceed despite existing submission
-const proceedAnyway = () => {
+const resetAnswers = () => {
+  Object.assign(formData.value, {
+    building: '', apartment: '', parking_spot: '', no_parking: false, status: '',
+    has_ev: '', interested: '', preferred_solution: '', timeline: '', comments: '',
+    email: '', consent_contact: false, consent_timestamp: null
+  })
+  answeredLotPrompts.value = []
+  errors.value = {}
+  submitError.value = ''
+  formShownAt.value = Date.now()
+}
+
+// "Modifier ma réponse": load the answer with the edit token and reopen the express form
+const editExistingAnswer = async () => {
+  editError.value = ''
+  if (!editContext.value) {
+    editError.value = 'Cette réponse ne peut plus être modifiée depuis cet appareil. Contactez le conseil syndical.'
+    return
+  }
+  try {
+    const response = await fetch(`/api/survey/${editContext.value.id}`, {
+      headers: { 'X-Edit-Token': editContext.value.token }
+    })
+    if (!response.ok) throw new Error('forbidden')
+    const data = await response.json()
+    const answer = data.response || data
+    resetAnswers()
+    for (const key of Object.keys(formData.value)) {
+      if (answer[key] !== undefined && answer[key] !== null) formData.value[key] = answer[key]
+    }
+    formData.value.no_parking = !!answer.no_parking
+    formData.value.consent_contact = !!answer.consent_contact
+    answeredLotPrompts.value = typedSpots.value
+    isEditing.value = true
+    hasExistingSubmission.value = false
+    enqueteMode.value = 'express'
+  } catch (e) {
+    editError.value = 'Cette réponse ne peut plus être modifiée en ligne. Contactez le conseil syndical.'
+  }
+}
+
+// "Répondre pour une autre place": a new, separate answer
+const answerAnotherSpot = () => {
+  resetAnswers()
+  editContext.value = null
+  isEditing.value = false
   hasExistingSubmission.value = false
+  enqueteMode.value = 'express'
 }
 
 // Fetch configuration from API
 onMounted(async () => {
   // Check for existing submission first
   checkExistingSubmission()
+
+  // Windshield flyer QR code: ?p=83&c=K7M4QX prefills the spot and carries the place code
+  const params = new URLSearchParams(location.search)
+  if (params.get('p') && !hasExistingSubmission.value) {
+    formData.value.parking_spot = params.get('p').replace(/-/g, ', ')
+  }
+  if (params.get('c')) placeCode.value = params.get('c').toUpperCase().slice(0, 12)
+  if (params.has('p') || params.has('c')) {
+    params.delete('p')
+    params.delete('c')
+    const query = params.toString()
+    history.replaceState(history.state, '', location.pathname + (query ? '?' + query : '') + location.hash)
+  }
+
+  fetch('/api/plan').then(r => (r.ok ? r.json() : null)).then(p => { plan.value = p }).catch(() => {})
 
   try {
     const response = await fetch('/api/config')
@@ -127,9 +211,11 @@ onMounted(async () => {
       buildingQuestion.value = config.building_question || buildingQuestion.value
       parkingSpots.value = config.parking_spots || null
       multiSpotLots.value = config.multi_spot_lots || []
+      lots.value = config.lots || config.multi_spot_lots || []
       privacy.value = config.privacy || {}
-      contactEmail.value = config.contact_email || contactEmail.value
-      syndicEmail.value = config.syndic_email || syndicEmail.value
+      // Empty when the instance has no real address configured: then nothing is shown
+      contactEmail.value = config.contact_email === 'conseil-syndical@exemple.fr' ? '' : (config.contact_email || '')
+      syndicEmail.value = config.syndic_email === 'syndic@exemple.fr' ? '' : (config.syndic_email || '')
     }
   } catch (err) {
     console.warn('Could not load config, using defaults')
@@ -177,6 +263,30 @@ const answerLotPrompt = (includeAll) => {
     formData.value.parking_spot = spots.join(', ')
   }
 }
+
+// "Place 82 · lot n°144 · place simple" under the big spot number
+const spotDescription = computed(() => {
+  const spots = typedSpots.value
+  if (!spots.length || parkingSpotError(formData.value.parking_spot, parkingSpots.value)) return null
+  const lot = lots.value.find(l => l.places.includes(spots[0]))
+  return {
+    places: spots.join('-'),
+    plural: spots.length > 1,
+    lot: lot?.lot,
+    type: lot ? (lot.places.length > 1 ? `lot double ${lot.places.join('-')}` : 'place simple') : ''
+  }
+})
+
+// Tapping a spot on the plan replaces the typed number
+const selectOnPlan = (spot) => {
+  formData.value.parking_spot = String(spot)
+  answeredLotPrompts.value = []
+}
+
+const expressComplete = computed(() =>
+  (formData.value.no_parking || (typedSpots.value.length && !parkingSpotError(formData.value.parking_spot, parkingSpots.value))) &&
+  !!formData.value.has_ev && !!formData.value.interested
+)
 
 const retentionText = computed(() => {
   const days = privacy.value.retention_days || 730
@@ -250,13 +360,15 @@ const sendAnswers = async (express) => {
   isSubmitting.value = true
   submitError.value = ''
 
-  const completing = !express && editContext.value
+  // Completing (full form after express) or editing (Modifier ma réponse) updates the same answer
+  const completing = (!express || isEditing.value) && editContext.value
   const url = completing ? `/api/survey/${editContext.value.id}` : '/api/survey'
+  const antiBot = { website: honeypot.value, form_elapsed_ms: Date.now() - formShownAt.value, code: placeCode.value || undefined }
   const payload = completing
-    ? { ...formData.value, edit_token: editContext.value.token }
+    ? { ...formData.value, express: express || undefined, edit_token: editContext.value.token }
     : express
-      ? { ...formData.value, email: '', consent_contact: false, consent_timestamp: null, express }
-      : { ...formData.value, express }
+      ? { ...formData.value, email: '', consent_contact: false, consent_timestamp: null, express, ...antiBot }
+      : { ...formData.value, express, ...antiBot }
 
   try {
     const response = await fetch(url, {
@@ -270,10 +382,11 @@ const sendAnswers = async (express) => {
     const data = await response.json()
 
     if (response.ok) {
-      // Save submission marker to localStorage
-      saveSubmissionMarker(formData.value.building)
-      editContext.value = express && data.edit_token ? { id: data.id, token: data.edit_token } : null
+      saveSubmissionMarker(data)
+      if (data.edit_token) editContext.value = { id: data.id, token: data.edit_token }
+      submitResult.value = data
       lastSubmitWasExpress.value = express
+      isEditing.value = false
       isSubmitted.value = true
     } else if (response.status === 409 && data.error === 'duplicate') {
       // Duplicate submission detected by server
@@ -289,7 +402,7 @@ const sendAnswers = async (express) => {
 }
 
 const submitExpress = async () => {
-  if (!validateExpress()) return
+  if (!validateExpress() || isSubmitting.value) return
   await sendAnswers(true)
 }
 
@@ -357,49 +470,44 @@ const switchToFull = () => {
 </script>
 
 <template>
-  <div class="page">
+  <div class="page enquete" :class="{ 'is-express': enqueteMode === 'express' && !isSubmitted && !hasExistingSubmission }">
     <div class="container">
-      <header class="page-header">
-        <h1>Participer à l'enquête</h1>
-        <p>
-          Répondez à quelques questions pour nous aider à dimensionner
-          le projet de bornes de recharge.
-        </p>
-      </header>
+      <p class="indicative">
+        Consultation indicative : seule l'assemblée générale décide. Une réponse par place ;
+        en cas de réponses contradictoires, le conseil syndical vérifie.
+      </p>
 
-      <!-- Already submitted warning -->
-      <div v-if="hasExistingSubmission && !isSubmitted" class="warning-card fade-in">
-        <div class="warning-icon">
-          <SvgIcon name="shield" :size="40" />
-        </div>
-        <h2>Vous avez déjà participé</h2>
-        <p>
-          Une réponse a été enregistrée depuis cet appareil
-          <span v-if="existingSubmissionBuilding">(Bâtiment {{ existingSubmissionBuilding }})</span>.
+      <!-- Already answered on this device -->
+      <div v-if="hasExistingSubmission && !isSubmitted" class="state-card fade-in">
+        <h2 class="state-title">
+          Merci, votre réponse
+          <template v-if="markerSpotsText">pour la place {{ markerSpotsText }}</template>
+          est enregistrée
+        </h2>
+        <p>Vous pouvez la modifier jusqu'à la date limite de la consultation.</p>
+        <button type="button" class="btn-signal" @click="editExistingAnswer">
+          Modifier ma réponse
+        </button>
+        <p v-if="editError" class="form-error">{{ editError }}</p>
+        <p class="state-links">
+          <a href="#" @click.prevent="answerAnotherSpot">Répondre pour une autre place</a>
+          <span aria-hidden="true">·</span>
+          <a href="#" @click.prevent="closeEnquete">Retour à l'accueil</a>
         </p>
-        <p class="text-muted">
-          Si vous souhaitez modifier votre réponse, veuillez contacter le conseil syndical.
-        </p>
-        <div class="warning-actions">
-          <button @click="closeEnquete" class="btn btn-secondary">
-            Retour à l'accueil
-          </button>
-          <button @click="proceedAnyway" class="btn btn-primary">
-            Soumettre une nouvelle réponse
-          </button>
-        </div>
       </div>
 
       <!-- Success state -->
-      <div v-else-if="isSubmitted" class="success-card fade-in">
-        <div class="success-icon">
-          <SvgIcon name="check" :size="40" />
-        </div>
-        <h2>Merci pour votre participation !</h2>
-        <p>
-          Votre réponse a été enregistrée. Elle nous aidera à définir
-          la meilleure solution pour notre copropriété.
+      <div v-else-if="isSubmitted" class="state-card fade-in">
+        <h2 class="state-title">
+          Merci !
+          <template v-if="typedSpots.length">Votre réponse pour la place {{ typedSpots.join('-') }} est enregistrée.</template>
+          <template v-else>Votre réponse est enregistrée.</template>
+        </h2>
+        <p v-if="submitResult?.conflict" class="state-note">
+          Une autre réponse existe déjà pour ce lot : le conseil syndical vérifiera.
         </p>
+        <p v-else>Elle aidera à dimensionner le projet présenté en assemblée générale.</p>
+
         <div v-if="lastSubmitWasExpress && editContext" class="contact-block">
           <template v-if="!contactSaved">
             <h3>Être informé de la suite (facultatif)</h3>
@@ -414,20 +522,18 @@ const switchToFull = () => {
                 placeholder="votre@email.com"
               />
             </div>
-            <label class="checkbox-option compact" :class="{ selected: contactForm.consent }">
+            <label class="plain-check">
               <input type="checkbox" v-model="contactForm.consent" />
-              <span class="checkbox-label">
-                <strong>J'accepte d'être contacté</strong>
-                <span>
-                  Mon e-mail sert uniquement à m'informer de l'avancement du projet IRVE.
-                  Je peux retirer mon consentement à tout moment.
-                </span>
+              <span>
+                <strong>J'accepte d'être contacté.</strong>
+                Mon e-mail sert uniquement à m'informer de l'avancement du projet IRVE.
+                Je peux retirer mon consentement à tout moment.
               </span>
             </label>
             <span v-if="contactError" class="form-error">{{ contactError }}</span>
             <button
               type="button"
-              class="btn btn-secondary contact-submit"
+              class="btn-outline contact-submit"
               :disabled="contactSaving"
               @click="saveContact"
             >
@@ -438,129 +544,146 @@ const switchToFull = () => {
             C'est noté : vous serez informé de la suite du projet.
           </p>
         </div>
-        <div class="success-actions">
+
+        <div class="state-actions">
           <button
             v-if="lastSubmitWasExpress && editContext"
             @click="completeAnswers"
-            class="btn btn-secondary"
+            class="btn-outline"
           >
             Compléter mes réponses (facultatif)
           </button>
-          <button @click="closeEnquete" class="btn btn-primary">
+          <button @click="closeEnquete" class="btn-signal">
             Retour à l'accueil
           </button>
         </div>
       </div>
 
-      <!-- Express answer: one screen -->
-      <div v-else-if="enqueteMode === 'express'" class="survey-form">
-        <div class="form-step express-card fade-in">
-          <h2>Répondre en 30 secondes</h2>
-          <p class="step-description">
-            Trois questions suffisent. Votre numéro de place permet de préparer
-            le raccordement de votre emplacement, même sans véhicule électrique aujourd'hui.
-          </p>
+      <!-- Express answer: one screen, mobile first -->
+      <div v-else-if="enqueteMode === 'express'" class="express fade-in">
+        <h1 class="express-title">Votre place<br>en 30 secondes</h1>
+        <p v-if="isEditing" class="state-note">Vous modifiez votre réponse.</p>
 
-          <div class="form-group">
-            <label class="form-label" for="express_parking_spot">
-              Votre numéro de place de parking <span class="required">*</span>
-            </label>
+        <div class="form-group">
+          <label class="form-label" for="express_parking_spot">Numéro de votre place</label>
+          <div class="spot-floor" :class="{ disabled: formData.no_parking }">
             <input
               type="text"
               id="express_parking_spot"
               v-model="formData.parking_spot"
-              class="form-input"
+              class="spot-input"
+              :class="{ long: formData.parking_spot.length > 3 }"
               inputmode="numeric"
               autocomplete="off"
-              :placeholder="spotPlaceholder"
+              :placeholder="parkingSpots ? `1 à ${parkingSpots}` : 'N°'"
               :disabled="formData.no_parking"
+              aria-describedby="spot-help"
             />
-            <span class="form-hint">Plusieurs places ? Séparez-les par une virgule.</span>
-            <label class="checkbox-option compact" :class="{ selected: formData.no_parking }">
-              <input type="checkbox" v-model="formData.no_parking" />
-              <span class="checkbox-label">
-                <strong>Je n'ai pas de place / je ne sais pas</strong>
-              </span>
-            </label>
-            <div v-if="lotPrompt" class="lot-prompt">
-              <p>
-                Place {{ lotPrompt.spot }} – lot double {{ lotPrompt.lot.places.join('-') }}
-                (lot n°{{ lotPrompt.lot.lot }}). Vos deux places sont-elles concernées ?
-              </p>
-              <div class="lot-prompt-actions">
-                <button type="button" class="btn btn-secondary btn-sm" @click="answerLotPrompt(true)">
-                  Oui, ajouter la place {{ lotPrompt.others.join(', ') }}
-                </button>
-                <button type="button" class="btn btn-link btn-sm" @click="answerLotPrompt(false)">
-                  Non, seulement la {{ lotPrompt.spot }}
-                </button>
-              </div>
-            </div>
-            <span v-if="errors.parking_spot" class="form-error">{{ errors.parking_spot }}</span>
           </div>
+          <p v-if="spotDescription" class="spot-line" aria-live="polite">
+            Place{{ spotDescription.plural ? 's' : '' }} {{ spotDescription.places }}
+            <template v-if="spotDescription.lot"> · <strong>lot n°{{ spotDescription.lot }}</strong> · {{ spotDescription.type }}</template>
+          </p>
+          <p v-else id="spot-help" class="form-hint">Touchez votre place sur le plan ou tapez son numéro. Plusieurs places : séparez-les par une virgule.</p>
 
-          <div class="form-group">
-            <label class="form-label">
-              Véhicule électrique ou hybride rechargeable ? <span class="required">*</span>
-            </label>
-            <div class="pill-group">
-              <label
-                v-for="opt in [{ v: 'oui', l: 'Oui' }, { v: 'projet', l: 'En projet' }, { v: 'non', l: 'Non' }]"
-                :key="opt.v"
-                class="pill-option"
-                :class="{ selected: formData.has_ev === opt.v }"
-              >
-                <input type="radio" v-model="formData.has_ev" :value="opt.v" name="express_has_ev" />
-                {{ opt.l }}
-              </label>
-            </div>
-            <span v-if="errors.has_ev" class="form-error">{{ errors.has_ev }}</span>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">
-              Intéressé par une borne sur votre place ? <span class="required">*</span>
-            </label>
-            <div class="pill-group">
-              <label
-                v-for="opt in [{ v: 'oui', l: 'Oui' }, { v: 'peut-etre', l: 'Peut-être' }, { v: 'non', l: 'Non' }]"
-                :key="opt.v"
-                class="pill-option"
-                :class="{ selected: formData.interested === opt.v }"
-              >
-                <input type="radio" v-model="formData.interested" :value="opt.v" name="express_interested" />
-                {{ opt.l }}
-              </label>
-            </div>
-            <span v-if="errors.interested" class="form-error">{{ errors.interested }}</span>
-          </div>
-
-          <div class="rgpd-notice">
+          <div v-if="lotPrompt" class="lot-prompt">
             <p>
-              <strong>Données :</strong> votre réponse n'est pas anonyme (le n° de place se rattache à un lot).
-              Elle sert uniquement au projet IRVE, n'est diffusée que de façon agrégée et est conservée
-              {{ retentionText }} au plus. Accès, rectification, suppression, opposition :
-              <a :href="'mailto:' + contactEmail">{{ contactEmail }}</a>.
-              <a href="#" @click.prevent="openPrivacyPolicy" class="privacy-link">Politique complète</a>
+              Place {{ lotPrompt.spot }} – lot double {{ lotPrompt.lot.places.join('-') }}
+              (lot n°{{ lotPrompt.lot.lot }}). Vos deux places sont-elles concernées ?
             </p>
+            <div class="segmented compact">
+              <button type="button" @click="answerLotPrompt(true)">Oui, les deux</button>
+              <button type="button" @click="answerLotPrompt(false)">Non, la {{ lotPrompt.spot }} seule</button>
+            </div>
           </div>
 
-          <div v-if="submitError" class="alert alert-error">
-            {{ submitError }}
+          <div v-if="!formData.no_parking" class="plan-box" :class="{ mini: typedSpots.length }">
+            <PlanPicker
+              :plan="plan"
+              :parking-spots="parkingSpots || 0"
+              :lots="multiSpotLots"
+              :selected="typedSpots"
+              :focus-selected="typedSpots.length > 0"
+              interactive
+              label="Plan du parking : touchez votre place"
+              @select="selectOnPlan"
+            />
           </div>
+          <button
+            v-if="typedSpots.length && !formData.no_parking"
+            type="button"
+            class="link-button"
+            @click="formData.parking_spot = ''"
+          >
+            Voir tout le plan
+          </button>
+
+          <label class="plain-check">
+            <input type="checkbox" v-model="formData.no_parking" />
+            <span>Je n'ai pas de place / je ne sais pas</span>
+          </label>
+          <span v-if="errors.parking_spot" class="form-error">{{ errors.parking_spot }}</span>
         </div>
 
-        <div class="form-navigation">
-          <button type="button" class="btn btn-link" @click="switchToFull">
-            Questionnaire complet (4 étapes)
+        <fieldset class="form-group">
+          <legend class="form-label">Véhicule électrique ou hybride rechargeable ?</legend>
+          <div class="segmented">
+            <label
+              v-for="opt in [{ v: 'oui', l: 'Oui' }, { v: 'projet', l: 'En projet' }, { v: 'non', l: 'Non' }]"
+              :key="opt.v"
+              :class="{ selected: formData.has_ev === opt.v }"
+            >
+              <input type="radio" v-model="formData.has_ev" :value="opt.v" name="express_has_ev" />
+              {{ opt.l }}
+            </label>
+          </div>
+          <span v-if="errors.has_ev" class="form-error">{{ errors.has_ev }}</span>
+        </fieldset>
+
+        <fieldset class="form-group">
+          <legend class="form-label">Intéressé par une borne sur votre place ?</legend>
+          <div class="segmented">
+            <label
+              v-for="opt in [{ v: 'oui', l: 'Oui' }, { v: 'peut-etre', l: 'Peut-être' }, { v: 'non', l: 'Non' }]"
+              :key="opt.v"
+              :class="{ selected: formData.interested === opt.v }"
+            >
+              <input type="radio" v-model="formData.interested" :value="opt.v" name="express_interested" />
+              {{ opt.l }}
+            </label>
+          </div>
+          <span v-if="errors.interested" class="form-error">{{ errors.interested }}</span>
+        </fieldset>
+
+        <!-- Honeypot: hidden from people and assistive tech, bots fill it -->
+        <div class="hp" aria-hidden="true">
+          <label for="website">Ne pas remplir</label>
+          <input id="website" v-model="honeypot" type="text" name="website" tabindex="-1" autocomplete="off" />
+        </div>
+
+        <p class="data-line">
+          Réponse non anonyme, jamais affichée individuellement.
+          <a href="#" @click.prevent="openPrivacyPolicy">Vos données</a>
+        </p>
+
+        <div v-if="submitError" class="alert alert-error">
+          {{ submitError }}
+        </div>
+
+        <p v-if="!isEditing" class="full-link">
+          <button type="button" class="link-button" @click="switchToFull">
+            Préférez-vous le questionnaire complet (4 étapes) ?
           </button>
+        </p>
+
+        <div class="sticky-submit">
           <button
             type="button"
-            class="btn btn-primary"
-            :disabled="isSubmitting"
+            class="btn-signal btn-block"
+            :disabled="!expressComplete || isSubmitting"
             @click="submitExpress"
           >
-            {{ isSubmitting ? 'Envoi en cours...' : 'Envoyer' }}
+            {{ isSubmitting ? 'Envoi en cours...' : (isEditing ? 'Enregistrer' : 'Envoyer') }}
           </button>
         </div>
       </div>
@@ -1119,204 +1242,13 @@ const switchToFull = () => {
   gap: 1rem;
 }
 
-.lot-prompt {
-  margin-top: 0.75rem;
-  padding: 0.75rem 1rem;
-  background: var(--color-primary-light);
-  border-radius: var(--radius);
-  font-size: 0.9rem;
-}
-
-.lot-prompt p {
-  margin-bottom: 0.5rem;
-}
-
-.lot-prompt-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.btn-sm {
-  padding: 0.5rem 0.875rem;
-  font-size: 0.875rem;
-}
-
 .privacy-missing {
   color: var(--color-warning);
   font-style: italic;
 }
 
-.express-card h2 {
-  color: var(--color-primary);
-}
-
-.pill-group {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.pill-option {
-  flex: 1;
-  position: relative;
-  text-align: center;
-  padding: 0.75rem 0.5rem;
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius);
-  cursor: pointer;
-  font-weight: 600;
-  transition: border-color 0.15s, background 0.15s;
-}
-
-.pill-option input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.pill-option.selected {
-  border-color: var(--color-primary);
-  background: var(--color-primary-light);
-  color: var(--color-primary-dark);
-}
-
-.checkbox-option.compact {
-  margin-top: 0.75rem;
-  padding: 0.625rem 0.875rem;
-}
-
 .form-input:disabled {
   opacity: 0.5;
-}
-
-.btn-link {
-  background: none;
-  border: none;
-  color: var(--color-primary);
-  text-decoration: underline;
-  padding-left: 0;
-  padding-right: 0;
-}
-
-.contact-block {
-  text-align: left;
-  border-top: 1px solid var(--color-border);
-  padding-top: 1.25rem;
-  margin-bottom: 1.5rem;
-}
-
-.contact-block h3 {
-  font-size: 1rem;
-  margin-bottom: 0.75rem;
-}
-
-.contact-block .form-group {
-  margin-bottom: 0;
-}
-
-.contact-submit {
-  margin-top: 0.75rem;
-  width: 100%;
-}
-
-.contact-saved {
-  text-align: center;
-  color: var(--color-success);
-  font-weight: 600;
-  margin: 0;
-}
-
-.success-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  align-items: center;
-}
-
-@media (min-width: 480px) {
-  .success-actions {
-    flex-direction: row;
-    justify-content: center;
-  }
-}
-
-.success-card,
-.warning-card {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-success);
-  border-radius: var(--radius-lg);
-  padding: 3rem 2rem;
-  text-align: center;
-  max-width: 500px;
-  margin: 0 auto;
-}
-
-.warning-card {
-  border-color: var(--color-warning);
-}
-
-.warning-icon {
-  width: 80px;
-  height: 80px;
-  background: var(--color-warning);
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 1.5rem;
-}
-
-.warning-card h2 {
-  color: var(--color-warning);
-  margin-bottom: 0.75rem;
-}
-
-.warning-card p {
-  color: var(--color-text-light);
-  margin-bottom: 0.75rem;
-}
-
-.warning-card .text-muted {
-  font-size: 0.9rem;
-  color: var(--color-text-muted);
-}
-
-.warning-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
-}
-
-@media (min-width: 480px) {
-  .warning-actions {
-    flex-direction: row;
-    justify-content: center;
-  }
-}
-
-.success-icon {
-  width: 80px;
-  height: 80px;
-  background: var(--color-success);
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 1.5rem;
-}
-
-.success-card h2 {
-  color: var(--color-success);
-  margin-bottom: 0.75rem;
-}
-
-.success-card p {
-  color: var(--color-text-light);
-  margin-bottom: 1.5rem;
 }
 
 .rgpd-notice {
@@ -1351,5 +1283,362 @@ const switchToFull = () => {
 
 .rgpd-notice .privacy-link:hover {
   color: var(--color-primary-dark);
+}
+/* ===== Theme: express form, states (brief §3.9) ===== */
+.enquete {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: 18px;
+}
+
+.enquete .container {
+  max-width: 640px;
+}
+
+.indicative {
+  font-size: 0.85rem;
+  color: var(--muted);
+  border-left: 3px solid var(--signal);
+  padding-left: 0.75rem;
+  margin: 0 0 1.5rem;
+}
+
+.express-title,
+.state-title {
+  font-family: var(--font-title);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 1.05;
+  color: var(--ink);
+}
+
+.express-title {
+  font-size: 2.1rem;
+  margin: 0 0 1.25rem;
+}
+
+.express .form-group {
+  margin-bottom: 1.5rem;
+  border: 0;
+  padding: 0;
+}
+
+.express .form-label {
+  display: block;
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 0.5rem;
+  padding: 0;
+}
+
+/* Spot number painted on an asphalt "floor" between two white lines */
+.spot-floor {
+  background: var(--asphalt);
+  border-left: 6px solid var(--paint);
+  border-right: 6px solid var(--paint);
+  padding: 0.75rem 1rem 1.25rem;
+  position: relative;
+}
+
+.spot-floor::after {
+  content: "";
+  position: absolute;
+  left: 25%;
+  right: 25%;
+  bottom: 0.9rem;
+  border-bottom: 3px dashed #ffffff55;
+}
+
+.spot-floor.disabled {
+  opacity: 0.45;
+}
+
+.spot-input {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  color: var(--paint);
+  font-family: var(--font-stencil);
+  font-weight: 800;
+  font-size: 6rem;
+  line-height: 1.1;
+  text-align: center;
+  caret-color: var(--signal);
+}
+
+.spot-input.long {
+  font-size: 3.5rem;
+}
+
+.spot-input::placeholder {
+  color: #ffffff40;
+  font-size: 2.25rem;
+}
+
+.spot-input:focus {
+  outline: 3px solid var(--signal);
+  outline-offset: 4px;
+}
+
+.spot-line {
+  margin: 0.6rem 0 0;
+  font-size: 1rem;
+}
+
+.spot-line strong {
+  color: var(--rose);
+}
+
+.express .form-hint {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin: 0.5rem 0 0;
+}
+
+.plan-box {
+  margin-top: 0.75rem;
+  border: 1px solid var(--rule);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Full plan: horizontal scroll on phones; mini-map once a spot is chosen */
+.plan-box :deep(.plan-picker) {
+  min-width: 640px;
+}
+
+.plan-box.mini :deep(.plan-picker) {
+  min-width: 0;
+  max-height: 180px;
+}
+
+.link-button {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin-top: 0.5rem;
+  color: var(--ink);
+  text-decoration: underline;
+  font: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+/* Neutral checkbox: must not look pre-selected */
+.plain-check {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  margin-top: 0.9rem;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.plain-check input {
+  width: 22px;
+  height: 22px;
+  margin-top: 0.1rem;
+  flex-shrink: 0;
+  accent-color: var(--ink);
+}
+
+/* Segmented buttons bordered in black, ink fill when selected */
+.segmented {
+  display: flex;
+  border: 2px solid var(--ink);
+}
+
+.segmented label,
+.segmented button {
+  flex: 1;
+  position: relative;
+  text-align: center;
+  padding: 0.8rem 0.25rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+  cursor: pointer;
+  background: #fff;
+  color: var(--ink);
+  border: 0;
+  font-family: inherit;
+}
+
+.segmented label + label,
+.segmented button + button {
+  border-left: 2px solid var(--ink);
+}
+
+.segmented label.selected {
+  background: var(--ink);
+  color: var(--paint);
+}
+
+.segmented input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  cursor: pointer;
+}
+
+.segmented label:focus-within {
+  outline: 3px solid var(--signal);
+  outline-offset: -3px;
+}
+
+.segmented.compact label,
+.segmented.compact button {
+  font-size: 0.95rem;
+  padding: 0.6rem 0.25rem;
+}
+
+.lot-prompt {
+  margin-top: 0.75rem;
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--rose);
+  padding: 0.75rem 1rem;
+  background: #fff;
+  font-size: 1rem;
+}
+
+.lot-prompt p {
+  margin: 0 0 0.6rem;
+}
+
+.hp {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.data-line {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.data-line a {
+  color: var(--ink);
+}
+
+.full-link {
+  margin: 0.5rem 0 1rem;
+}
+
+.btn-signal,
+.btn-outline {
+  font-family: var(--font-title);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 1.25rem;
+  padding: 0.9rem 1.5rem;
+  cursor: pointer;
+  border: 2px solid var(--ink);
+}
+
+.btn-signal {
+  background: var(--signal);
+  color: var(--asphalt);
+  border-color: var(--signal);
+}
+
+.btn-signal:disabled {
+  background: var(--rule);
+  border-color: var(--rule);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--ink);
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* Send button stuck to the bottom of the screen on phones */
+.sticky-submit {
+  position: sticky;
+  bottom: 0;
+  background: var(--paper);
+  border-top: 1px solid var(--rule);
+  padding: 0.75rem 0 calc(0.75rem + env(safe-area-inset-bottom, 0));
+  margin: 0 -1rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.state-card {
+  border-top: 3px solid var(--ink);
+  padding-top: 1.25rem;
+}
+
+.state-title {
+  font-size: 1.9rem;
+  margin: 0 0 0.75rem;
+}
+
+.state-note {
+  border-left: 4px solid var(--signal);
+  padding-left: 0.75rem;
+}
+
+.state-links {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.state-links a {
+  color: var(--ink);
+}
+
+.state-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.contact-block {
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 1.25rem 0;
+  margin-top: 1.25rem;
+}
+
+.contact-block h3 {
+  font-family: var(--font-title);
+  text-transform: uppercase;
+  font-size: 1.2rem;
+  margin: 0 0 0.75rem;
+}
+
+.contact-submit {
+  margin-top: 0.75rem;
+  width: 100%;
+}
+
+.contact-saved {
+  font-weight: 700;
+  margin: 0;
+}
+
+@media (min-width: 640px) {
+  .state-actions {
+    flex-direction: row;
+  }
+  .sticky-submit {
+    position: static;
+    border-top: 0;
+    margin: 0;
+    padding: 0;
+  }
 }
 </style>

@@ -1,16 +1,19 @@
 import { Router } from 'express';
 import { body, validationResult } from 'express-validator';
 import crypto from 'crypto';
-import db, { logAuditEvent } from '../db.js';
-import { surveyLimiter } from '../middleware/rateLimiter.js';
+import db, { logAuditEvent, hashIp } from '../db.js';
+import { surveyLimiter, surveyDailyLimiter, editLimiter } from '../middleware/rateLimiter.js';
 import { getClientIP } from '../middleware/auth.js';
 import { BUILDING_IDS } from '../config.js';
 import { normalizeParkingSpots } from '../parking.js';
+import { lotsForParkingSpot, otherAnswersOnLots, verifyCode, editTokenExpiry } from '../lots.js';
 
 const router = Router();
 
-// Express answers may be completed with the full form within this window
-const EDIT_WINDOW = '-24 hours';
+// Minimal time to fill the form (anti-robot, measured by the client)
+const MIN_FORM_ELAPSED_MS = 3000;
+
+const CONFLICT_MESSAGE = 'Votre réponse est enregistrée. Une autre réponse existe déjà pour ce lot : le conseil syndical vérifiera.';
 
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
@@ -31,48 +34,26 @@ function generateSubmissionHash(data) {
 }
 
 /**
- * Check for duplicate submissions
+ * Detect an accidental double submission: same answer from the same IP within 24 hours.
+ * Different people on the same lot are never blocked: they become a conflict.
  * @param {string} hash - Submission hash
- * @param {string} email - Email address (optional)
- * @param {string} building - Building identifier
+ * @param {string|null} ipHash - Keyed IP hash
+ * @param {boolean} identifiable - Answer has a spot, apartment or email
  * @returns {Object|null} - Duplicate info or null
  */
-function checkDuplicate(hash, email, building, identifiable = true) {
-  // Check for exact duplicate hash within 24 hours. Answers without any
-  // identifying field (spot, apartment, email) all share the same hash,
-  // so the check would block unrelated neighbours.
-  const hashStmt = db.prepare(`
+function checkDuplicate(hash, ipHash, identifiable) {
+  if (!identifiable || !ipHash) return null;
+  return db.prepare(`
     SELECT id, created_at FROM responses
-    WHERE submission_hash = ?
+    WHERE submission_hash = ? AND ip_hash = ?
     AND created_at > datetime('now', '-24 hours')
     ORDER BY created_at DESC
     LIMIT 1
-  `);
-  const hashDup = identifiable ? hashStmt.get(hash) : null;
-  if (hashDup) {
-    return { type: 'exact', id: hashDup.id, created_at: hashDup.created_at };
-  }
-
-  // Check for same email + building within 7 days (if email provided)
-  if (email) {
-    const emailStmt = db.prepare(`
-      SELECT id, created_at FROM responses
-      WHERE email = ? AND building = ?
-      AND created_at > datetime('now', '-7 days')
-      ORDER BY created_at DESC
-      LIMIT 1
-    `);
-    const emailDup = emailStmt.get(email.toLowerCase().trim(), building);
-    if (emailDup) {
-      return { type: 'email_building', id: emailDup.id, created_at: emailDup.created_at };
-    }
-  }
-
-  return null;
+  `).get(hash, ipHash) || null;
 }
 
-// Validation rules
-const surveyValidation = [
+// Validation rules (shared with the admin paper entry, which sets req.isPaperEntry)
+export const surveyValidation = [
   body('express')
     .optional()
     .isBoolean().withMessage('Valeur express invalide')
@@ -96,14 +77,15 @@ const surveyValidation = [
     .optional()
     .isBoolean().withMessage('Valeur invalide pour « pas de place »')
     .toBoolean(),
-  // Express answers skip the status question and are stored as 'non_renseigne'
+  // Express and paper answers may skip the status question ('non_renseigne')
+  // 'non_renseigne' is what an express answer stores; editing it keeps that value
   body('status')
     .optional({ values: 'falsy' })
     .trim()
-    .isIn(['proprietaire', 'locataire']).withMessage('Statut invalide'),
+    .isIn(['proprietaire', 'locataire', 'non_renseigne']).withMessage('Statut invalide'),
   body('status')
-    .if((value, { req }) => !req.body.express)
-    .notEmpty().withMessage('Statut requis'),
+    .if((value, { req }) => !req.body.express && !req.isPaperEntry)
+    .isIn(['proprietaire', 'locataire']).withMessage('Statut requis'),
   body('has_ev')
     .trim()
     .isIn(['oui', 'non', 'projet']).withMessage('Valeur invalide pour véhicule électrique'),
@@ -129,7 +111,10 @@ const surveyValidation = [
     .normalizeEmail(),
   body('consent_contact')
     .optional()
-    .isBoolean().withMessage('Consentement invalide')
+    .isBoolean().withMessage('Consentement invalide'),
+  body('code')
+    .optional({ values: 'falsy' })
+    .isString().isLength({ max: 20 }).withMessage('Code invalide')
 ];
 
 /**
@@ -157,6 +142,66 @@ function toRow(body) {
   };
 }
 
+/**
+ * Verification level of an answer: 'verifiee' only when it covers exactly one lot
+ * and the windshield code matches that lot
+ * @param {Array<{ key: string }>} lots - Lots covered by the answer
+ * @param {string|undefined} code
+ * @returns {'verifiee'|'declarative'|null} - null when no code was given
+ */
+function checkCode(lots, code) {
+  if (!code) return null;
+  return lots.length === 1 && verifyCode(lots[0].key, code) ? 'verifiee' : 'declarative';
+}
+
+/**
+ * Store a new answer without ever overwriting another answer on the same lot
+ * (shared by the web form and the admin paper entry)
+ * @param {Object} row - Values from toRow()
+ * @param {Object} options - { source, verification, express, ipHash, userAgent }
+ * @returns {{ id: number, conflict: boolean, editToken: string, createdAt: string }}
+ */
+export function insertAnswer(row, { source = 'web', verification = 'declarative', express = 0, ipHash = null, userAgent = null }) {
+  const lots = lotsForParkingSpot(row.parking_spot);
+  const editToken = crypto.randomBytes(16).toString('hex');
+
+  return db.transaction(() => {
+    const others = otherAnswersOnLots(lots.map(l => l.key));
+    // A verified answer wins over declarative ones: no conflict to settle then
+    const verifiedWins = verification === 'verifiee' && !others.some(o => o.verification === 'verifiee');
+    const conflict = others.length > 0 && !verifiedWins;
+
+    const result = db.prepare(`
+      INSERT INTO responses (
+        building, apartment, parking_spot, no_parking, status, has_ev,
+        interested, preferred_solution, timeline, comments,
+        email, consent_contact, ip_address, user_agent,
+        submission_hash, consent_timestamp, express, edit_token_hash,
+        review_status, source, verification, ip_hash
+      ) VALUES (
+        @building, @apartment, @parking_spot, @no_parking, @status, @has_ev,
+        @interested, @preferred_solution, @timeline, @comments,
+        @email, @consent_contact, NULL, @user_agent,
+        @submission_hash, @consent_timestamp, @express, @edit_token_hash,
+        @review_status, @source, @verification, @ip_hash
+      )
+    `).run({
+      ...row,
+      user_agent: userAgent,
+      submission_hash: generateSubmissionHash(row),
+      express,
+      edit_token_hash: hashToken(editToken),
+      // Marker only: conflicts are computed at read time, older answers are left untouched
+      review_status: others.length ? 'conflit' : 'ok',
+      source,
+      verification,
+      ip_hash: ipHash
+    });
+    const { created_at: createdAt } = db.prepare('SELECT created_at FROM responses WHERE id = ?').get(result.lastInsertRowid);
+    return { id: Number(result.lastInsertRowid), conflict, editToken, createdAt };
+  })();
+}
+
 const sendValidationErrors = (req, res) => {
   const errors = validationResult(req);
   if (errors.isEmpty()) return false;
@@ -167,77 +212,104 @@ const sendValidationErrors = (req, res) => {
   return true;
 };
 
+/**
+ * Anti-robot checks before validation: honeypot (fake success, nothing stored) and minimal fill time
+ */
+function antiRobot(req, res, next) {
+  const clientIP = getClientIP(req);
+  if (req.body.website) {
+    logAuditEvent('honeypot', clientIP, {});
+    return res.status(201).json({
+      success: true,
+      id: 0,
+      edit_token: crypto.randomBytes(16).toString('hex'),
+      edit_token_expires_at: editTokenExpiry(null).toISOString(),
+      conflict: false,
+      verification: 'declarative',
+      message: 'Votre réponse a été enregistrée. Merci de votre participation !'
+    });
+  }
+  const elapsed = Number(req.body.form_elapsed_ms);
+  if (req.body.form_elapsed_ms !== undefined && req.body.form_elapsed_ms !== null && Number.isFinite(elapsed) && elapsed < MIN_FORM_ELAPSED_MS) {
+    logAuditEvent('too_fast', clientIP, { elapsed_ms: elapsed });
+    return res.status(400).json({
+      success: false,
+      error: 'too_fast',
+      message: 'Merci de vérifier vos réponses avant d\'envoyer.'
+    });
+  }
+  next();
+}
+
+/**
+ * Answer matching an edit token, if the token is still valid
+ * @param {number} id
+ * @param {string} editToken
+ * @returns {Object|null}
+ */
+function findEditable(id, editToken) {
+  if (!editToken) return null;
+  const row = db.prepare('SELECT * FROM responses WHERE id = ? AND edit_token_hash = ?').get(id, hashToken(editToken));
+  if (!row || editTokenExpiry(row.created_at) < new Date()) return null;
+  return row;
+}
+
 // POST /api/survey - Submit a survey response (full form or express)
-router.post('/', surveyLimiter, surveyValidation, (req, res) => {
+router.post('/', surveyLimiter, surveyDailyLimiter, antiRobot, surveyValidation, (req, res) => {
   if (sendValidationErrors(req, res)) return;
 
   const express = req.body.express ? 1 : 0;
   // Express answers carry no email: consent is only given on the thank-you screen
   const row = toRow(express ? { ...req.body, email: null, consent_contact: false } : req.body);
   const clientIP = getClientIP(req);
-  const userAgent = req.headers['user-agent'] || 'unknown';
+  const ipHash = hashIp(clientIP);
 
   try {
-    // Generate submission hash for duplicate detection
-    const submissionHash = generateSubmissionHash(row);
-
-    // Check for duplicates
     const identifiable = !!(row.parking_spot || row.apartment || row.email);
-    const duplicate = checkDuplicate(submissionHash, row.email, row.building, identifiable);
-
+    const duplicate = checkDuplicate(generateSubmissionHash(row), ipHash, identifiable);
     if (duplicate) {
-      logAuditEvent('duplicate_attempt', clientIP, {
-        building: row.building,
-        duplicate_type: duplicate.type,
-        original_id: duplicate.id
-      });
-
+      logAuditEvent('duplicate_attempt', clientIP, { building: row.building, original_id: duplicate.id });
       return res.status(409).json({
         success: false,
         error: 'duplicate',
-        message: 'Une réponse similaire a déjà été enregistrée. Si vous souhaitez modifier votre réponse, veuillez contacter le conseil syndical.'
+        message: 'Cette réponse vient déjà d\'être enregistrée.'
       });
     }
 
-    // One-time token letting the respondent complete an express answer
-    const editToken = crypto.randomBytes(16).toString('hex');
+    const lots = lotsForParkingSpot(row.parking_spot);
+    const codeCheck = checkCode(lots, req.body.code);
+    if (codeCheck === 'declarative') {
+      logAuditEvent('code_mismatch', clientIP, { lots: lots.map(l => l.key) });
+    }
+    const verification = codeCheck || 'declarative';
 
-    const stmt = db.prepare(`
-      INSERT INTO responses (
-        building, apartment, parking_spot, no_parking, status, has_ev,
-        interested, preferred_solution, timeline, comments,
-        email, consent_contact, ip_address, user_agent,
-        submission_hash, consent_timestamp, express, edit_token_hash
-      ) VALUES (
-        @building, @apartment, @parking_spot, @no_parking, @status, @has_ev,
-        @interested, @preferred_solution, @timeline, @comments,
-        @email, @consent_contact, @ip_address, @user_agent,
-        @submission_hash, @consent_timestamp, @express, @edit_token_hash
-      )
-    `);
-
-    const result = stmt.run({
-      ...row,
-      ip_address: null,
-      user_agent: userAgent,
-      submission_hash: submissionHash,
+    const saved = insertAnswer(row, {
+      source: 'web',
+      verification,
       express,
-      edit_token_hash: hashToken(editToken)
+      ipHash,
+      userAgent: req.headers['user-agent'] || 'unknown'
     });
 
-    // Log the submission
     logAuditEvent('submission', clientIP, {
-      response_id: result.lastInsertRowid,
+      response_id: saved.id,
       building: row.building,
       express: !!express,
-      has_consent: !!row.consent_contact
+      has_consent: !!row.consent_contact,
+      verification,
+      conflict: saved.conflict
     });
 
     res.status(201).json({
       success: true,
-      message: 'Votre réponse a été enregistrée. Merci de votre participation !',
-      id: result.lastInsertRowid,
-      edit_token: editToken
+      id: saved.id,
+      edit_token: saved.editToken,
+      edit_token_expires_at: editTokenExpiry(saved.createdAt).toISOString(),
+      conflict: saved.conflict,
+      verification,
+      message: saved.conflict
+        ? CONFLICT_MESSAGE
+        : 'Votre réponse a été enregistrée. Merci de votre participation !'
     });
   } catch (error) {
     console.error('Database error:', error);
@@ -248,29 +320,55 @@ router.post('/', surveyLimiter, surveyValidation, (req, res) => {
   }
 });
 
-// PUT /api/survey/:id - Complete a recent answer (e.g. express) with the full form
-router.put('/:id', surveyLimiter, surveyValidation, (req, res) => {
+// GET /api/survey/:id - Own answer, to prefill the form (header X-Edit-Token)
+router.get('/:id', editLimiter, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const row = findEditable(id, String(req.headers['x-edit-token'] || ''));
+  if (!row) {
+    return res.status(403).json({
+      success: false,
+      message: 'Cette réponse ne peut plus être consultée. Contactez le conseil syndical.'
+    });
+  }
+  const fields = ['parking_spot', 'no_parking', 'building', 'apartment', 'status', 'has_ev', 'interested',
+    'preferred_solution', 'timeline', 'comments', 'email', 'consent_contact'];
+  const response = Object.fromEntries(fields.map(f => [f, row[f]]));
+  response.no_parking = !!row.no_parking;
+  response.consent_contact = !!row.consent_contact;
+  res.json({ success: true, id, response });
+});
+
+// PUT /api/survey/:id - Update one's own answer (edit token valid until the campaign deadline)
+router.put('/:id', editLimiter, surveyValidation, (req, res) => {
   if (sendValidationErrors(req, res)) return;
 
   const id = parseInt(req.params.id, 10);
-  const editToken = String(req.body.edit_token || '');
   const clientIP = getClientIP(req);
 
   try {
-    const existing = db.prepare(`
-      SELECT id FROM responses
-      WHERE id = ? AND edit_token_hash = ?
-      AND created_at > datetime('now', '${EDIT_WINDOW}')
-    `).get(id, hashToken(editToken));
-
+    const existing = findEditable(id, String(req.body.edit_token || ''));
     if (!existing) {
       return res.status(403).json({
         success: false,
-        message: 'Cette réponse ne peut plus être complétée. Contactez le conseil syndical pour la modifier.'
+        message: 'Cette réponse ne peut plus être modifiée. Contactez le conseil syndical.'
       });
     }
 
     const row = toRow(req.body);
+    const lots = lotsForParkingSpot(row.parking_spot);
+    const spotChanged = row.parking_spot !== existing.parking_spot;
+
+    // A new code may verify the answer; a new spot drops the previous verification
+    const codeCheck = checkCode(lots, req.body.code);
+    if (codeCheck === 'declarative') logAuditEvent('code_mismatch', clientIP, { response_id: id });
+    const verification = codeCheck || (spotChanged ? 'declarative' : existing.verification || 'declarative');
+
+    // Admin decisions (suspect, ignoree) are kept; the conflict marker follows the new lots
+    let reviewStatus = existing.review_status || 'ok';
+    if (spotChanged && ['ok', 'conflit'].includes(reviewStatus)) {
+      reviewStatus = otherAnswersOnLots(lots.map(l => l.key), id).length ? 'conflit' : 'ok';
+    }
+
     db.prepare(`
       UPDATE responses SET
         building = @building, apartment = @apartment, parking_spot = @parking_spot,
@@ -278,19 +376,28 @@ router.put('/:id', surveyLimiter, surveyValidation, (req, res) => {
         interested = @interested, preferred_solution = @preferred_solution,
         timeline = @timeline, comments = @comments, email = @email,
         consent_contact = @consent_contact, consent_timestamp = @consent_timestamp,
-        submission_hash = @submission_hash
+        submission_hash = @submission_hash, verification = @verification,
+        review_status = @review_status
       WHERE id = @id
-    `).run({ ...row, submission_hash: generateSubmissionHash(row), id });
+    `).run({
+      ...row,
+      submission_hash: generateSubmissionHash(row),
+      verification,
+      review_status: reviewStatus,
+      id
+    });
 
     logAuditEvent('submission_completed', clientIP, {
       response_id: id,
-      has_consent: !!row.consent_contact
+      has_consent: !!row.consent_contact,
+      verification
     });
 
     res.json({
       success: true,
-      message: 'Vos réponses ont été complétées. Merci !',
-      id
+      message: 'Vos réponses ont été mises à jour. Merci !',
+      id,
+      verification
     });
   } catch (error) {
     console.error('Database error:', error);
@@ -301,7 +408,7 @@ router.put('/:id', surveyLimiter, surveyValidation, (req, res) => {
   }
 });
 
-// PATCH /api/survey/:id/contact - Add an email (with explicit consent) to a recent answer,
+// PATCH /api/survey/:id/contact - Add an email (with explicit consent) to one's answer,
 // e.g. from the thank-you screen of an express answer. Only touches the contact fields.
 const contactValidation = [
   body('email')
@@ -316,27 +423,25 @@ const contactValidation = [
     .isISO8601().withMessage('Date de consentement invalide')
 ];
 
-router.patch('/:id/contact', surveyLimiter, contactValidation, (req, res) => {
+router.patch('/:id/contact', editLimiter, contactValidation, (req, res) => {
   if (sendValidationErrors(req, res)) return;
 
   const id = parseInt(req.params.id, 10);
-  const editToken = String(req.body.edit_token || '');
   const clientIP = getClientIP(req);
 
   try {
-    const result = db.prepare(`
-      UPDATE responses
-      SET email = ?, consent_contact = 1, consent_timestamp = ?
-      WHERE id = ? AND edit_token_hash = ?
-      AND created_at > datetime('now', '${EDIT_WINDOW}')
-    `).run(req.body.email, req.body.consent_timestamp || new Date().toISOString(), id, hashToken(editToken));
-
-    if (result.changes === 0) {
+    if (!findEditable(id, String(req.body.edit_token || ''))) {
       return res.status(403).json({
         success: false,
         message: 'Cette réponse ne peut plus être modifiée. Contactez le conseil syndical.'
       });
     }
+
+    db.prepare(`
+      UPDATE responses
+      SET email = ?, consent_contact = 1, consent_timestamp = ?
+      WHERE id = ?
+    `).run(req.body.email, req.body.consent_timestamp || new Date().toISOString(), id);
 
     logAuditEvent('contact_added', clientIP, { response_id: id });
 
@@ -353,4 +458,5 @@ router.patch('/:id/contact', surveyLimiter, contactValidation, (req, res) => {
   }
 });
 
+export { toRow };
 export default router;

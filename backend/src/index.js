@@ -8,7 +8,7 @@ import { dirname, join } from 'path';
 import surveyRouter from './routes/survey.js';
 import statsRouter, { handleExportCSV } from './routes/stats.js';
 import { globalLimiter } from './middleware/rateLimiter.js';
-import { COPRO, BUILDINGS, BUILDINGS_QUESTION, PARKING_SPOTS, LOTS, CAMPAIGN, PRIVACY, TEXTS } from './config.js';
+import { COPRO, BUILDINGS, BUILDINGS_QUESTION, PARKING_SPOTS, LOTS, CAMPAIGN, PRIVACY, TEXTS, loadParkingPlan } from './config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -27,7 +27,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'"],
       scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      imgSrc: ["'self'", "data:", "https://api.qrserver.com"],
+      imgSrc: ["'self'", "data:"],
       connectSrc: ["'self'"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       objectSrc: ["'none'"],
@@ -69,8 +69,10 @@ app.get('/api/health', (req, res) => {
 
 // Public config endpoint (non-sensitive configuration for frontend)
 app.get('/api/config', (req, res) => {
-  const CONTACT_EMAIL = process.env.CONTACT_EMAIL || 'conseil-syndical@exemple.fr';
-  const SYNDIC_EMAIL = process.env.SYNDIC_EMAIL || 'syndic@exemple.fr';
+  // Example addresses from .env.example must never reach respondents
+  const configured = (value, example) => !!value && value.trim().toLowerCase() !== example;
+  const contactConfigured = configured(process.env.CONTACT_EMAIL, 'conseil-syndical@exemple.fr');
+  const syndicConfigured = configured(process.env.SYNDIC_EMAIL, 'syndic@exemple.fr');
   res.json({
     copro_name: COPRO.name,
     copro_address: COPRO.address,
@@ -85,14 +87,26 @@ app.get('/api/config', (req, res) => {
     parking_spots: PARKING_SPOTS,
     // Only multi-spot lots: lets the form ask "are both spots concerned?"
     multi_spot_lots: LOTS.filter(l => l.places.length > 1),
-    contact_email: CONTACT_EMAIL,
-    syndic_email: SYNDIC_EMAIL,
+    // Full lot table (single lots included) for "Place 82 · lot n°144 · place simple"
+    lots: LOTS,
+    contact_email: contactConfigured ? process.env.CONTACT_EMAIL.trim() : '',
+    contact_configured: contactConfigured,
+    syndic_email: syndicConfigured ? process.env.SYNDIC_EMAIL.trim() : '',
+    syndic_configured: syndicConfigured,
     privacy: PRIVACY,
     texts: TEXTS,
     // Campaign defaults for the flyer generator (editable there)
     campaign_deadline: CAMPAIGN.deadline,
     campaign_signature: CAMPAIGN.signature
   });
+});
+
+// Public parking plan (geometry only, no answers), cached in memory
+const parkingPlan = loadParkingPlan();
+app.get('/api/plan', (req, res) => {
+  if (!parkingPlan) return res.status(404).json({ error: 'Pas de plan pour cette instance' });
+  res.set('Cache-Control', 'public, max-age=3600');
+  res.json(parkingPlan);
 });
 
 // Serve static files in production

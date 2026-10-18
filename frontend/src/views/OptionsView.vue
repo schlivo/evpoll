@@ -1,6 +1,5 @@
 <script setup>
 import { ref } from 'vue'
-import SvgIcon from '../components/SvgIcon.vue'
 
 const selectedOption = ref(null)
 
@@ -102,10 +101,8 @@ const getRatingBars = (value, max = 5) => {
 </script>
 
 <template>
-  <div class="page">
-    <div class="container">
-      <header class="page-header">
-        <h1>Les options possibles</h1>
+  <div class="info-view">
+      <header class="info-intro">
         <p>
           Comparatif des différentes solutions d'installation de bornes de recharge
           en copropriété.
@@ -113,7 +110,7 @@ const getRatingBars = (value, max = 5) => {
       </header>
 
       <section class="comparison-table">
-        <h2>Tableau comparatif</h2>
+        <h4>Tableau comparatif</h4>
         <div class="table-wrapper">
           <table>
             <thead>
@@ -138,7 +135,7 @@ const getRatingBars = (value, max = 5) => {
                 </td>
                 <td>{{ option.cost }}</td>
                 <td>
-                  <div class="rating">
+                  <div class="rating" role="img" :aria-label="`${option.autonomy} sur 5`">
                     <span
                       v-for="(filled, i) in getRatingBars(option.autonomy)"
                       :key="i"
@@ -148,7 +145,7 @@ const getRatingBars = (value, max = 5) => {
                   </div>
                 </td>
                 <td>
-                  <div class="rating">
+                  <div class="rating" role="img" :aria-label="`${option.evolution} sur 5`">
                     <span
                       v-for="(filled, i) in getRatingBars(option.evolution)"
                       :key="i"
@@ -158,12 +155,12 @@ const getRatingBars = (value, max = 5) => {
                   </div>
                 </td>
                 <td>
-                  <div class="rating">
+                  <div class="rating" role="img" :aria-label="`${option.complexity} sur 5`">
                     <span
                       v-for="(filled, i) in getRatingBars(option.complexity)"
                       :key="i"
                       class="rating-bar"
-                      :class="{ filled, warning: true }"
+                      :class="{ filled }"
                     ></span>
                   </div>
                 </td>
@@ -180,7 +177,7 @@ const getRatingBars = (value, max = 5) => {
       </section>
 
       <section class="options-detail">
-        <h2>Détail des solutions</h2>
+        <h4>Détail des solutions</h4>
 
         <div class="option-cards">
           <div
@@ -189,27 +186,34 @@ const getRatingBars = (value, max = 5) => {
             class="option-card"
             :class="{ recommended: option.recommended, expanded: selectedOption === option.id }"
           >
-            <div class="option-header" @click="selectedOption = selectedOption === option.id ? null : option.id">
-              <div>
-                <h3>{{ option.name }}</h3>
+            <button
+              type="button"
+              class="option-header"
+              :aria-expanded="selectedOption === option.id ? 'true' : 'false'"
+              :aria-controls="`option-${option.id}`"
+              @click="selectedOption = selectedOption === option.id ? null : option.id"
+            >
+              <span class="option-head-text">
+                <span class="option-name">{{ option.name }}</span>
                 <span class="option-subtitle">{{ option.subtitle }}</span>
-              </div>
-              <div class="option-cost">
+              </span>
+              <span class="option-cost">
                 {{ option.cost }}
                 <span v-if="option.costType === 'subscription'" class="cost-note">+ mensuel</span>
-              </div>
-            </div>
+              </span>
+              <span class="option-sign" aria-hidden="true">{{ selectedOption === option.id ? '–' : '+' }}</span>
+            </button>
 
-            <div class="option-content" v-show="selectedOption === option.id">
+            <div class="option-content" :id="`option-${option.id}`" v-show="selectedOption === option.id">
               <div class="pros-cons">
                 <div class="pros">
-                  <h4>Avantages</h4>
+                  <h5>Avantages</h5>
                   <ul>
                     <li v-for="pro in option.pros" :key="pro">{{ pro }}</li>
                   </ul>
                 </div>
                 <div class="cons">
-                  <h4>Inconvénients</h4>
+                  <h5>Inconvénients</h5>
                   <ul>
                     <li v-for="con in option.cons" :key="con">{{ con }}</li>
                   </ul>
@@ -221,13 +225,10 @@ const getRatingBars = (value, max = 5) => {
       </section>
 
       <section class="recommendation">
-        <h2>Notre recommandation : la colonne Enedis</h2>
+        <h4>Notre recommandation : la colonne Enedis</h4>
         <div class="recommendation-card">
-          <div class="recommendation-icon">
-            <SvgIcon name="bolt" :size="40" />
-          </div>
           <div class="recommendation-content">
-            <h3>Comment ça marche ?</h3>
+            <h5>Comment ça marche ?</h5>
             <p>
               La colonne horizontale Enedis est une infrastructure électrique installée dans le parking
               qui permet à chaque résident de disposer de son propre point de livraison avec un
@@ -239,7 +240,7 @@ const getRatingBars = (value, max = 5) => {
         <div class="mechanism-grid">
           <div class="mechanism-card">
             <div class="mechanism-number">1</div>
-            <h4>Financement de l'infrastructure</h4>
+            <h5>Financement de l'infrastructure</h5>
             <p>
               Enedis finance une grande partie de la colonne horizontale via le
               <strong>TURPE</strong> (Tarif d'Utilisation des Réseaux Publics d'Électricité).
@@ -250,7 +251,7 @@ const getRatingBars = (value, max = 5) => {
 
           <div class="mechanism-card">
             <div class="mechanism-number">2</div>
-            <h4>Compteur Linky individuel</h4>
+            <h5>Compteur Linky individuel</h5>
             <p>
               Chaque utilisateur souscrit son propre contrat d'électricité (EDF, Engie, TotalEnergies...)
               avec un compteur Linky dédié à sa borne. <strong>La copropriété n'a rien à gérer</strong> :
@@ -260,7 +261,7 @@ const getRatingBars = (value, max = 5) => {
 
           <div class="mechanism-card">
             <div class="mechanism-number">3</div>
-            <h4>Le prestataire installateur</h4>
+            <h5>Le prestataire installateur</h5>
             <p>
               Un opérateur partenaire (électricien qualifié IRVE) installe les bornes individuelles.
               <strong>Il se rémunère sur la vente et l'installation des bornes</strong>, pas sur un abonnement.
@@ -269,10 +270,7 @@ const getRatingBars = (value, max = 5) => {
           </div>
 
           <div class="mechanism-card highlight">
-            <div class="mechanism-number mechanism-check">
-              <SvgIcon name="check" :size="24" />
-            </div>
-            <h4>Coût pour la copropriété</h4>
+            <h5>Coût pour la copropriété</h5>
             <p>
               L'infrastructure étant préfinancée par Enedis, elle ne coûte rien à la copropriété.
               D'éventuels frais annexes (honoraires de suivi, adaptation du local électrique) seront
@@ -284,13 +282,10 @@ const getRatingBars = (value, max = 5) => {
       </section>
 
       <section class="participation-importance">
-        <h2>Pourquoi votre participation compte</h2>
+        <h4>Pourquoi votre participation compte</h4>
         <div class="importance-card">
-          <div class="importance-icon">
-            <SvgIcon name="chart-up" :size="40" />
-          </div>
           <div class="importance-content">
-            <h3>Des chiffres réels pour préparer l'AG</h3>
+            <h5>Des chiffres réels pour préparer l'AG</h5>
             <p>
               Vos réponses servent à dimensionner le projet, à le présenter en AG avec des chiffres
               réels et à obtenir de meilleures offres des opérateurs. Les opérateurs et installateurs
@@ -319,48 +314,58 @@ const getRatingBars = (value, max = 5) => {
         </div>
       </section>
 
-    </div>
   </div>
 </template>
 
 <style scoped>
-.comparison-table {
-  margin-bottom: 3rem;
+.info-intro p {
+  margin: 0 0 1.5rem;
+  color: var(--muted);
 }
 
-.comparison-table h2 {
-  margin-bottom: 1rem;
+.comparison-table,
+.options-detail,
+.recommendation,
+.participation-importance {
+  margin-bottom: 2.25rem;
+}
+
+h4 {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+h5 {
+  font-size: 1.1875rem;
+  margin-bottom: 0.5rem;
 }
 
 table {
   min-width: 600px;
-}
-
-tr.recommended {
-  background: var(--color-primary-light);
+  font-size: 1rem;
 }
 
 tr {
   cursor: pointer;
 }
 
-tr:hover {
-  background: var(--color-bg-alt);
-}
-
-tr.recommended:hover {
-  background: var(--color-primary-light);
+tbody tr:hover {
+  background: var(--place);
 }
 
 .badge {
   display: inline-block;
-  background: var(--color-primary);
-  color: white;
-  font-size: 0.7rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 999px;
   margin-left: 0.5rem;
-  vertical-align: middle;
+  padding: 0 0.4rem;
+  border: 1px solid var(--ink);
+  font-family: var(--font-title);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  vertical-align: 0.1em;
 }
 
 .rating {
@@ -371,97 +376,88 @@ tr.recommended:hover {
 .rating-bar {
   width: 16px;
   height: 8px;
-  background: var(--color-border);
-  border-radius: 2px;
+  border: 1px solid var(--muted);
 }
 
 .rating-bar.filled {
-  background: var(--color-primary);
-}
-
-.rating-bar.filled.warning {
-  background: var(--color-warning);
+  background: var(--ink);
+  border-color: var(--ink);
 }
 
 .table-legend {
-  margin-top: 1rem;
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
-}
-
-.options-detail h2 {
-  margin-bottom: 1.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.9375rem;
+  color: var(--muted);
 }
 
 .option-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  border-bottom: 1px solid var(--rule);
 }
 
 .option-card {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
-
-.option-card.recommended {
-  border-color: var(--color-primary);
+  border-top: 1px solid var(--rule);
 }
 
 .option-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.25rem;
+  width: 100%;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.85rem 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
   cursor: pointer;
-  background: var(--color-bg-card);
 }
 
-.option-card.recommended .option-header {
-  background: var(--color-primary-light);
+.option-head-text {
+  flex: 1;
+  min-width: 0;
 }
 
-.option-header:hover {
-  background: var(--color-bg-alt);
+.option-name {
+  display: block;
+  font-weight: 700;
 }
 
-.option-card.recommended .option-header:hover {
-  background: var(--color-primary-light);
+.option-header:hover .option-name {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
-.option-header h3 {
-  margin: 0;
-  font-size: 1.1rem;
-}
-
-.option-subtitle {
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
+.option-subtitle,
+.cost-note {
+  display: block;
+  font-size: 1rem;
+  color: var(--muted);
 }
 
 .option-cost {
-  font-weight: 600;
-  color: var(--color-primary);
+  max-width: 45%;
+  font-weight: 700;
   text-align: right;
 }
 
 .cost-note {
-  display: block;
-  font-size: 0.75rem;
   font-weight: 400;
-  color: var(--color-text-muted);
+}
+
+.option-sign {
+  width: 1.25rem;
+  flex-shrink: 0;
+  text-align: center;
+  color: var(--muted);
 }
 
 .option-content {
-  padding: 1.25rem;
-  border-top: 1px solid var(--color-border);
-  background: var(--color-bg-alt);
+  padding: 0 0 1.25rem;
 }
 
 .pros-cons {
   display: grid;
-  gap: 1.5rem;
+  gap: 1rem 2rem;
 }
 
 @media (min-width: 640px) {
@@ -470,81 +466,38 @@ tr.recommended:hover {
   }
 }
 
-.pros h4,
-.cons h4 {
-  margin-bottom: 0.75rem;
-  font-size: 0.9rem;
-}
-
-.pros h4 {
-  color: var(--color-success);
-}
-
-.cons h4 {
-  color: var(--color-danger);
+.pros h5,
+.cons h5 {
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  color: var(--muted);
 }
 
 .pros ul,
-.cons ul {
+.cons ul,
+.recommendation-content ul {
   margin: 0;
   padding-left: 1.25rem;
-  font-size: 0.9rem;
-  color: var(--color-text-light);
 }
 
 .pros li,
 .cons li {
-  margin-bottom: 0.5rem;
-}
-
-.recommendation {
-  margin: 3rem 0;
-}
-
-.recommendation h2 {
-  margin-bottom: 1rem;
+  margin-bottom: 0.4rem;
 }
 
 .recommendation-card {
-  display: flex;
-  gap: 1.5rem;
-  background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-bg) 100%);
-  border: 2px solid var(--color-primary);
-  border-radius: var(--radius-lg);
-  padding: 2rem;
-}
-
-.recommendation-icon {
-  color: var(--color-primary);
-  flex-shrink: 0;
-  display: flex;
-  align-items: flex-start;
-}
-
-.recommendation-content h3 {
-  color: var(--color-primary-dark);
-  margin-bottom: 0.5rem;
+  border-left: 3px solid var(--ink);
+  padding: 0.25rem 0 0.25rem 1rem;
 }
 
 .recommendation-content p {
-  color: var(--color-text-light);
-  margin-bottom: 1rem;
-}
-
-.recommendation-content ul {
   margin: 0;
-  padding-left: 1.25rem;
-  color: var(--color-text);
-}
-
-.recommendation-content li {
-  margin-bottom: 0.25rem;
 }
 
 .mechanism-grid {
   display: grid;
-  gap: 1rem;
-  margin-top: 1.5rem;
+  gap: 0 2rem;
+  margin-top: 1.25rem;
 }
 
 @media (min-width: 768px) {
@@ -554,88 +507,30 @@ tr.recommended:hover {
 }
 
 .mechanism-card {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-}
-
-.mechanism-card.highlight {
-  background: var(--color-primary-light);
-  border-color: var(--color-primary);
+  border-top: 1px solid var(--ink);
+  padding: 0.75rem 0 1.25rem;
 }
 
 .mechanism-number {
-  width: 36px;
-  height: 36px;
-  background: var(--color-primary);
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-family: var(--font-title);
   font-weight: 700;
-  margin-bottom: 1rem;
-}
-
-.mechanism-card.highlight .mechanism-number {
-  background: var(--color-primary-dark);
-}
-
-.mechanism-number.mechanism-check {
-  font-size: 1rem;
-}
-
-.mechanism-card h4 {
-  margin: 0 0 0.5rem;
-  font-size: 1rem;
+  font-size: 1.5rem;
+  line-height: 1;
+  margin-bottom: 0.4rem;
 }
 
 .mechanism-card p {
   margin: 0;
-  color: var(--color-text-light);
-  font-size: 0.9rem;
-  line-height: 1.6;
-}
-
-.participation-importance {
-  margin: 3rem 0;
-}
-
-.participation-importance h2 {
-  margin-bottom: 1rem;
-}
-
-.importance-card {
-  display: flex;
-  gap: 1.5rem;
-  background: linear-gradient(135deg, #fef3c7 0%, var(--color-bg) 100%);
-  border: 2px solid var(--color-warning);
-  border-radius: var(--radius-lg);
-  padding: 2rem;
-}
-
-.importance-icon {
-  color: var(--color-secondary);
-  flex-shrink: 0;
-  display: flex;
-  align-items: flex-start;
-}
-
-.importance-content h3 {
-  color: var(--color-text);
-  margin-bottom: 0.75rem;
 }
 
 .importance-content > p {
-  color: var(--color-text-light);
-  margin-bottom: 1.25rem;
+  margin: 0 0 1rem;
 }
 
 .importance-benefits {
   display: grid;
-  gap: 1rem;
-  margin-bottom: 1.25rem;
+  gap: 0 2rem;
+  margin-bottom: 1rem;
 }
 
 @media (min-width: 640px) {
@@ -645,30 +540,21 @@ tr.recommended:hover {
 }
 
 .importance-benefits .benefit {
-  background: white;
-  padding: 1rem;
-  border-radius: var(--radius);
-  text-align: center;
+  border-top: 1px solid var(--rule);
+  padding: 0.6rem 0;
 }
 
 .importance-benefits .benefit strong {
   display: block;
-  color: var(--color-primary-dark);
-  margin-bottom: 0.25rem;
 }
 
 .importance-benefits .benefit span {
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
+  font-size: 1rem;
+  color: var(--muted);
 }
 
 .importance-note {
-  background: white;
-  padding: 1rem;
-  border-radius: var(--radius);
-  font-style: italic;
-  color: var(--color-text);
   margin: 0 !important;
+  font-style: italic;
 }
-
 </style>

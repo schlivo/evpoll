@@ -1,35 +1,15 @@
 <script setup>
-import { ref, onMounted, inject } from 'vue'
-import SvgIcon from '../components/SvgIcon.vue'
+import { ref, computed, inject } from 'vue'
+import Accordion from '../components/Accordion.vue'
 
-// Public instance config loaded by App.vue (address, footer text)
+// Public instance config loaded by App.vue (contacts)
 const instanceConfig = inject('instanceConfig', ref({}))
 
-const openItems = ref([])
-const contactEmail = ref('conseil.syndical@copropriete.fr')
-const syndicEmail = ref('syndic@gestionnaire.fr')
+// Per-instance contacts (CONTACT_EMAIL / SYNDIC_EMAIL): hidden when not configured
+const contactEmail = computed(() => instanceConfig.value.contact_email || '')
+const syndicEmail = computed(() => instanceConfig.value.syndic_email || '')
 
-// Per-instance contacts come from the backend (CONTACT_EMAIL / SYNDIC_EMAIL);
-// the literals above are only the fallback if /api/config is unreachable.
-onMounted(async () => {
-  try {
-    const response = await fetch('/api/config')
-    const config = await response.json()
-    contactEmail.value = config.contact_email || contactEmail.value
-    syndicEmail.value = config.syndic_email || syndicEmail.value
-  } catch (error) {
-    console.error('Failed to load config:', error)
-  }
-})
-
-const toggleItem = (index) => {
-  const idx = openItems.value.indexOf(index)
-  if (idx > -1) {
-    openItems.value.splice(idx, 1)
-  } else {
-    openItems.value.push(index)
-  }
-}
+const openItems = ref({})
 
 const faqItems = [
   {
@@ -84,157 +64,78 @@ const faqItems = [
 </script>
 
 <template>
-  <div class="page">
-    <div class="container">
-      <header class="page-header">
-        <h1>Questions fréquentes</h1>
-        <p>
-          Retrouvez les réponses aux questions les plus courantes sur
-          l'installation de bornes de recharge en copropriété.
-        </p>
-      </header>
+  <div class="info-view">
+    <header class="info-intro">
+      <p>
+        Retrouvez les réponses aux questions les plus courantes sur
+        l'installation de bornes de recharge en copropriété.
+      </p>
+    </header>
 
-      <div class="accordion">
-        <div
-          v-for="(item, index) in faqItems"
-          :key="index"
-          class="accordion-item"
-          :class="{ open: openItems.includes(index) }"
-        >
-          <button class="accordion-header" @click="toggleItem(index)">
-            <span>{{ item.question }}</span>
-            <span class="accordion-icon">
-              <SvgIcon name="chevron-down" :size="20" />
-            </span>
-          </button>
-          <div class="accordion-content">
-            <p>{{ item.answer }}</p>
-          </div>
-        </div>
-      </div>
-
-      <section class="contact-section">
-        <h2>Vous avez d'autres questions ?</h2>
-        <div class="contact-card">
-          <p>
-            N'hésitez pas à nous contacter pour toute question supplémentaire
-            concernant le projet IRVE de notre copropriété.
-          </p>
-          <div class="contact-info">
-            <div class="contact-item">
-              <strong>Conseil syndical</strong>
-              <a :href="'mailto:' + contactEmail">{{ contactEmail }}</a>
-            </div>
-            <div class="contact-item">
-              <strong>Syndic</strong>
-              <a :href="'mailto:' + syndicEmail">{{ syndicEmail }}</a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div v-if="instanceConfig.copro_address || instanceConfig.texts?.footer" class="site-address">
-        <p v-if="instanceConfig.copro_address">{{ instanceConfig.copro_name }} – {{ instanceConfig.copro_address }}</p>
-        <p v-if="instanceConfig.parking_address">Parking : {{ instanceConfig.parking_address }}</p>
-        <p v-if="instanceConfig.texts?.footer">{{ instanceConfig.texts.footer }}</p>
-      </div>
-
+    <div class="faq-list">
+      <Accordion
+        v-for="(item, index) in faqItems"
+        :key="index"
+        v-model:open="openItems[index]"
+        :title="item.question"
+        variant="question"
+        :level="4"
+      >
+        <p>{{ item.answer }}</p>
+      </Accordion>
     </div>
+
+    <section v-if="contactEmail || syndicEmail" class="contact-section">
+      <h4>Vous avez d'autres questions ?</h4>
+      <p>
+        N'hésitez pas à nous contacter pour toute question supplémentaire
+        concernant le projet IRVE de notre copropriété.
+      </p>
+      <dl class="contact-info">
+        <div v-if="contactEmail" class="contact-item">
+          <dt>Conseil syndical</dt>
+          <dd><a :href="'mailto:' + contactEmail">{{ contactEmail }}</a></dd>
+        </div>
+        <div v-if="syndicEmail" class="contact-item">
+          <dt>Syndic</dt>
+          <dd><a :href="'mailto:' + syndicEmail">{{ syndicEmail }}</a></dd>
+        </div>
+      </dl>
+    </section>
   </div>
 </template>
 
 <style scoped>
-.accordion {
-  margin-bottom: 3rem;
+.info-intro p {
+  margin: 0 0 1rem;
+  color: var(--muted);
 }
 
-.accordion-item {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  margin-bottom: 0.5rem;
-  overflow: hidden;
+.faq-list {
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 2rem;
 }
 
-.accordion-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 1rem 1.25rem;
-  background: var(--color-bg-card);
-  border: none;
-  font-size: 1rem;
-  font-weight: 500;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.accordion-header:hover {
-  background: var(--color-bg-alt);
-}
-
-.accordion-icon {
-  color: var(--color-text-muted);
-  transition: transform 0.2s;
-  display: flex;
-  align-items: center;
-}
-
-.accordion-item.open .accordion-icon {
-  transform: rotate(180deg);
-}
-
-.accordion-content {
-  display: none;
-  padding: 0 1.25rem 1rem;
-  background: var(--color-bg-card);
-}
-
-.accordion-content p {
+.faq-list p {
   margin: 0;
-  color: var(--color-text-light);
-  line-height: 1.7;
+  max-width: 70ch;
 }
 
-.accordion-item.open .accordion-content {
-  display: block;
+.contact-section h4 {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--rule);
 }
 
-.site-address {
-  margin-top: 2rem;
-  text-align: center;
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-}
-
-.site-address p {
-  margin: 0.15rem 0;
-}
-
-.contact-section {
-  margin-bottom: 3rem;
-}
-
-.contact-section h2 {
-  margin-bottom: 1rem;
-}
-
-.contact-card {
-  background: var(--color-bg-alt);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-}
-
-.contact-card > p {
-  color: var(--color-text-light);
-  margin-bottom: 1rem;
+.contact-section > p {
+  margin: 0 0 1rem;
 }
 
 .contact-info {
   display: grid;
-  gap: 1rem;
+  gap: 0.75rem 2rem;
+  margin: 0;
 }
 
 @media (min-width: 640px) {
@@ -243,20 +144,12 @@ const faqItems = [
   }
 }
 
-.contact-item {
-  background: var(--color-bg-card);
-  padding: 1rem;
-  border-radius: var(--radius);
+.contact-item dt {
+  font-weight: 700;
 }
 
-.contact-item strong {
-  display: block;
-  margin-bottom: 0.25rem;
+.contact-item dd {
+  margin: 0;
+  overflow-wrap: anywhere;
 }
-
-.contact-item span {
-  color: var(--color-primary);
-  font-size: 0.9rem;
-}
-
 </style>

@@ -2,6 +2,9 @@
 import { ref, onMounted, computed } from 'vue'
 import SvgIcon from '../components/SvgIcon.vue'
 import ParkingPlan from '../components/ParkingPlan.vue'
+import AdminConflicts from '../components/AdminConflicts.vue'
+import AdminPaperEntry from '../components/AdminPaperEntry.vue'
+import AdminCodes from '../components/AdminCodes.vue'
 
 const isAuthenticated = ref(false)
 const password = ref('')
@@ -12,6 +15,11 @@ const stats = ref(null)
 const spots = ref(null)
 const parkingPlan = ref(null)
 const buildingLabels = ref({})
+const buildingChoices = ref([])
+// False while CONTACT_EMAIL is unset or still the example address
+const contactConfigured = ref(true)
+const exportNotice = ref('')
+const conflictsPanel = ref(null)
 const loading = ref(false)
 const loginLoading = ref(false)
 const error = ref('')
@@ -84,10 +92,15 @@ const loadStats = async () => {
   loading.value = true
   error.value = ''
   try {
-    const response = await fetch('/api/stats')
+    // Full figures are admin-only: the public /api/stats only has global totals
+    const response = await fetch('/api/stats/admin/summary', {
+      headers: { 'Authorization': `Bearer ${authToken.value}` }
+    })
     if (response.ok) {
       stats.value = await response.json()
       loadSpots()
+    } else if (response.status === 401) {
+      logout()
     } else {
       error.value = 'Erreur lors du chargement des statistiques'
     }
@@ -113,7 +126,9 @@ const loadSpots = async () => {
     const configResponse = await fetch('/api/config')
     if (configResponse.ok) {
       const config = await configResponse.json()
-      buildingLabels.value = Object.fromEntries((config.building_choices || []).map(c => [c.id, c.label]))
+      buildingChoices.value = config.building_choices || []
+      buildingLabels.value = Object.fromEntries(buildingChoices.value.map(c => [c.id, c.label]))
+      contactConfigured.value = config.contact_configured !== false
     }
     const planResponse = await fetch('/api/stats/admin/plan', {
       headers: { 'Authorization': `Bearer ${authToken.value}` }
@@ -126,14 +141,19 @@ const loadSpots = async () => {
   }
 }
 
-/** Spots where at least one respondent answered "oui" (list for Enedis immediate connections). */
+/** Spots of the lots whose retained answer is "oui" (conflicts excluded until settled). */
 const interestedSpots = computed(() =>
-  (spots.value?.spots || [])
-    .filter(s => s.responses.some(r => r.interested === 'oui'))
-    .map(s => s.spot)
+  (spots.value?.interested_lots || []).flatMap(l => l.places)
 )
 
+/** Reload figures after a conflict action or a paper entry */
+const refreshAfterChange = () => {
+  loadStats()
+  conflictsPanel.value?.load()
+}
+
 const exportCSV = async () => {
+  exportNotice.value = ''
   try {
     const response = await fetch('/api/stats/export', {
       headers: { 'Authorization': `Bearer ${authToken.value}` }
@@ -147,15 +167,14 @@ const exportCSV = async () => {
       a.click()
       URL.revokeObjectURL(url)
     } else if (response.status === 404) {
-      alert('Export indisponible. Vérifiez que le backend tourne sur le port 3000.')
+      exportNotice.value = 'Export indisponible. Vérifiez que le backend tourne.'
     } else if (response.status === 401) {
-      alert('Session expirée. Veuillez vous reconnecter.')
       logout()
     } else {
-      alert('Erreur lors de l\'export')
+      exportNotice.value = 'Erreur lors de l\'export'
     }
   } catch (err) {
-    alert('Erreur lors de l\'export. Le backend est-il démarré (port 3000) ?')
+    exportNotice.value = 'Erreur lors de l\'export. Le backend est-il démarré ?'
   }
 }
 
@@ -297,7 +316,14 @@ onMounted(() => {
         </div>
       </header>
 
-      <div v-if="loading" class="loading">
+      <div v-if="!contactConfigured" class="config-warning" role="alert">
+        <strong>Adresse de contact non configurée.</strong>
+        Définissez <code>CONTACT_EMAIL</code> dans le <code>.env</code> de l'instance : en attendant, aucune adresse
+        n'est affichée aux répondants.
+      </div>
+      <p v-if="exportNotice" class="form-error">{{ exportNotice }}</p>
+
+      <div v-if="loading && !stats" class="loading">
         <p>Chargement des statistiques...</p>
       </div>
 
@@ -321,17 +347,22 @@ onMounted(() => {
           <div v-if="stats.parking_spots" class="metric-card primary">
             <div class="metric-value">{{ stats.declared_spots }}<small> / {{ stats.parking_spots }}</small></div>
             <div class="metric-label">Places déclarées</div>
-            <div class="metric-detail">{{ stats.no_parking || 0 }} « pas de place » · {{ stats.express_responses || 0 }} express</div>
+            <div class="metric-detail">{{ stats.no_parking || 0 }} « pas de place » · {{ stats.express_responses || 0 }} express · {{ stats.paper_responses || 0 }} papier</div>
           </div>
           <div v-if="stats.declared_lots !== null && stats.declared_lots !== undefined" class="metric-card primary">
             <div class="metric-value">{{ stats.declared_lots }}<small> / {{ stats.total_lots }}</small></div>
             <div class="metric-label">Lots déclarés</div>
             <div class="metric-detail">un lot double compte une fois</div>
           </div>
+          <div class="metric-card" :class="{ warning: stats.conflict_lots }">
+            <div class="metric-value">{{ stats.conflict_lots || 0 }}</div>
+            <div class="metric-label">Lots en conflit</div>
+            <div class="metric-detail">{{ stats.suspect_responses || 0 }} suspecte(s) · {{ stats.ignored_responses || 0 }} ignorée(s)</div>
+          </div>
           <div class="metric-card success">
             <div class="metric-value">{{ (stats.interest?.oui || 0) + (stats.interest?.['peut-etre'] || 0) }}</div>
             <div class="metric-label">Intéressés</div>
-            <div class="metric-detail">oui + peut-être</div>
+            <div class="metric-detail">oui + peut-être · {{ stats.interested_lots_count || 0 }} lot(s) « oui »</div>
           </div>
           <div class="metric-card info">
             <div class="metric-value">{{ (stats.has_ev?.oui || 0) + (stats.has_ev?.projet || 0) }}</div>
@@ -491,9 +522,9 @@ onMounted(() => {
           <ParkingPlan
             v-if="spots.parking_spots"
             :parking-spots="spots.parking_spots"
-            :lots="parkingPlan?.lots || []"
             :spots="spots.spots"
             :plan="parkingPlan?.plan || null"
+            :lots="parkingPlan?.lots || []"
             class="spots-plan"
           />
           <div v-if="spots.spots.length" class="spots-table-wrapper">
@@ -512,26 +543,30 @@ onMounted(() => {
                   <tr
                     v-for="(r, i) in item.responses"
                     :key="item.spot + '-' + r.id"
-                    :class="{ conflict: item.responses.length > 1 }"
+                    :class="{ conflict: item.conflict, dimmed: !r.retained && !item.conflict && item.responses.length > 1 }"
                   >
                     <td>{{ i === 0 ? item.spot : '' }}</td>
                     <td :class="'interest-' + r.interested">{{ interestLabels[r.interested] || r.interested }}</td>
                     <td>{{ evLabels[r.has_ev] || r.has_ev }}</td>
                     <td>{{ statusLabels[r.status] || r.status }}</td>
-                    <td>#{{ r.id }}</td>
+                    <td>#{{ r.id }}<span v-if="r.source === 'papier'"> · papier</span><span v-if="r.verification === 'verifiee'"> · code ✓</span><span v-if="r.review_status === 'suspect'"> · suspecte</span></td>
                   </tr>
                 </template>
               </tbody>
             </table>
           </div>
-          <p v-if="spots.spots.some(s => s.responses.length > 1)" class="spots-note">
-            Les lignes surlignées signalent une place déclarée par plusieurs réponses (propriétaire et locataire, ou doublon) : à vérifier.
+          <p v-if="spots.spots.some(s => s.conflict)" class="spots-note">
+            Les lignes surlignées signalent un lot en conflit (plusieurs réponses) : à trancher dans la section « Conflits ».
           </p>
           <p v-if="spots.unrecognized.length" class="spots-note">
             Numéros non reconnus :
             <span v-for="u in spots.unrecognized" :key="u.id">« {{ u.value }} » (#{{ u.id }}) </span>
           </p>
         </section>
+
+        <AdminConflicts ref="conflictsPanel" :token="authToken" @changed="loadStats" @unauthorized="logout" />
+        <AdminPaperEntry :token="authToken" :building-choices="buildingChoices" @saved="refreshAfterChange" @unauthorized="logout" />
+        <AdminCodes :token="authToken" @unauthorized="logout" />
 
         <!-- Additional stats (only show section and items with > 0 respondents) -->
         <section
@@ -877,6 +912,22 @@ onMounted(() => {
 
 .spots-table tr.conflict {
   background: rgba(245, 158, 11, 0.1);
+}
+
+.spots-table tr.dimmed {
+  opacity: 0.6;
+}
+
+.metric-card.warning {
+  border-color: var(--color-warning);
+}
+
+.config-warning {
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 2px solid var(--color-warning);
+  border-radius: var(--radius);
+  background: var(--color-bg-card);
 }
 
 .spots-table .interest-oui {

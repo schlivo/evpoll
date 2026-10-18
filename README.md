@@ -191,13 +191,16 @@ CORS_ORIGIN=http://localhost:5173
 | `ADMIN_PASSWORD` | **Oui** | Mot de passe admin (min. 12 caractères recommandé) |
 | `BUILDINGS` | Non | Liste des bâtiments séparés par virgule |
 | `TOTAL_LOTS` | Non | Nombre total de lots (pour calcul participation) |
-| `CONTACT_EMAIL` | Non | Email du conseil syndical |
+| `CONTACT_EMAIL` | Non | Email du conseil syndical. Non défini ou laissé à l'exemple `conseil-syndical@exemple.fr` : aucune adresse n'est affichée (`contact_configured: false`) et l'admin affiche un avertissement. Idem `SYNDIC_EMAIL` |
 | `INSTANCE_DIR` | Non | Dossier de l'instance (voir ci-dessous) |
 | `PARKING_CONFIG` | Non | Fichier JSON décrivant la copro physique (entrées, escaliers, lots/places) |
 | `PARKING_SPOTS` | Non | Nombre de places (numérotées 1..N) si pas d'instance |
 | `DATA_CONTROLLER` | Non | Responsable du traitement affiché dans la notice RGPD |
 | `RETENTION_DAYS` | Non | Conservation des réponses en jours (défaut 730), affichée dans la notice |
 | `AUDIT_RETENTION_DAYS` | Non | Conservation du journal de sécurité (IP) en jours (défaut 365) |
+| `IP_HASH_SECRET` | Non | Clé HMAC de l'empreinte d'IP des réponses (indicateur « même IP »). Sinon, clé aléatoire générée une fois et gardée en base (table `meta`) |
+| `IP_HASH_RETENTION_DAYS` | Non | Conservation de l'empreinte d'IP en jours (défaut 30), purge quotidienne, affichée dans la notice |
+| `CAMPAIGN_DEADLINE` | Non | Date limite (AAAA-MM-JJ) : le jeton de modification reste valable jusqu'à la fin de ce jour (sinon 30 jours) |
 
 ### Socle commun et instance
 
@@ -212,11 +215,13 @@ Le code de ce dépôt (public) est **générique**. Tout ce qui est propre à un
 ├── parking.json         (optionnel, via PARKING_CONFIG) description physique : copro,
 │                        entrées (`entrances[]`, lettre d'escalier visible seulement dans
 │                        l'export admin), escaliers, lots et places ; instance.json l'emporte
-├── plan/parking.json    (optionnel) coordonnées des places pour le plan de l'admin
+├── plan/places.json     (optionnel) polygones des places et murs : plan de l'accueil, du formulaire et de l'admin
 └── docs/                (optionnel) briefs, revues, non servis par l'application
 ```
 
-Modèle complet : [`instances/demo/`](instances/demo/). Les secrets (`ADMIN_PASSWORD`, e-mails)
+Modèle complet : [`instances/demo/`](instances/demo/). Textes facultatifs de l'instance (`texts`) :
+`footer`, `hero_kicker`, `hero_title`, `plan_caption` (cartouche du plan) et `paper_contact`
+(contact de l'encadré « Pas de smartphone ? », à défaut `CONTACT_EMAIL`). Les secrets (`ADMIN_PASSWORD`, e-mails)
 restent dans l'environnement. Une variable d'environnement définie l'emporte sur la valeur de l'instance.
 
 ---
@@ -503,9 +508,13 @@ Pour accéder depuis Internet :
 | Méthode | URL | Description |
 |---------|-----|-------------|
 | `GET` | `/api/health` | Health check |
-| `GET` | `/api/config` | Configuration publique (bâtiments, emails) |
-| `GET` | `/api/stats` | Statistiques agrégées (anonymes) |
-| `POST` | `/api/survey` | Soumettre une réponse |
+| `GET` | `/api/config` | Configuration publique (bâtiments, lots, emails configurés) |
+| `GET` | `/api/stats` | Totaux globaux seulement ; ventilation par entrée avec « moins de 5 » sous 5 réponses |
+| `GET` | `/api/stats/counter` | Compteur de campagne (places et lots déclarés) |
+| `POST` | `/api/survey` | Soumettre une réponse (`code` de papillon facultatif) → `{ id, edit_token, edit_token_expires_at, conflict, verification }` |
+| `GET` | `/api/survey/:id` | Sa propre réponse (en-tête `X-Edit-Token`), pour préremplir |
+| `PUT` | `/api/survey/:id` | Modifier sa réponse (`edit_token`) |
+| `PATCH` | `/api/survey/:id/contact` | Ajouter son email avec consentement (`edit_token`) |
 
 ### Endpoints protégés (authentification requise)
 
@@ -515,8 +524,29 @@ Pour accéder depuis Internet :
 | `POST` | `/api/stats/logout` | Déconnexion |
 | `GET` | `/api/stats/export` | Export CSV |
 | `GET` | `/api/stats/admin/audit` | Journal d'audit |
-| `GET` | `/api/stats/admin/duplicates` | Doublons détectés |
+| `GET` | `/api/stats/admin/duplicates` | Doublons détectés (même email) |
+| `GET` | `/api/stats/admin/summary` | Statistiques complètes du tableau de bord |
+| `GET` | `/api/stats/admin/spots` | Places déclarées, lots intéressés, lots en conflit |
+| `GET` | `/api/stats/admin/conflicts` | Lots ayant plusieurs réponses (même IP, délai) |
+| `POST` | `/api/stats/admin/conflicts/:lot` | `{ action: 'keep', keep_id }`, `{ action: 'suspect', id }` ou `{ action: 'ignore', id }` |
+| `POST` | `/api/stats/admin/paper` | Saisie d'une réponse papier |
+| `GET` | `/api/stats/admin/codes/status` | Nombre de codes de papillons et date de génération |
+| `POST` | `/api/stats/admin/codes/regenerate` | Nouveaux codes : liste en clair renvoyée une seule fois |
 | `DELETE` | `/api/stats/admin/cleanup` | Nettoyage données anciennes |
+
+### Une réponse par lot, conflits et codes
+
+- La clé est le **lot** déduit de la place (un lot double compte une fois ; sans table de lots, la place sert de lot).
+- Une nouvelle réponse sur un lot déjà déclaré n'écrase jamais la précédente : elle est enregistrée et le lot
+  passe « en conflit » (calculé à la lecture : au moins deux réponses non ignorées). Avec le jeton de modification,
+  c'est une mise à jour normale.
+- Un lot en conflit compte « déclaré » mais pas « intéressé » tant que l'admin n'a pas tranché (garder, suspecte, ignorer,
+  chaque action journalisée). Les réponses sans place sont comptées à part.
+- **Codes de papillon** : 6 caractères sans ambiguïté, un par lot, stockés hachés (SHA-256). Une réponse avec le bon code
+  est `verifiee` et prime sur les réponses `declarative` ; un code faux n'empêche pas de répondre.
+- **Anti-robot** : champ piège `website` (succès factice, rien n'est enregistré), `form_elapsed_ms` < 3 s refusé
+  (`too_fast`), 5 réponses par heure et 10 par 24 h par IP. L'IP en clair n'est pas stockée avec les réponses :
+  seule une empreinte HMAC, effacée après `IP_HASH_RETENTION_DAYS`.
 
 ### Endpoints RGPD
 

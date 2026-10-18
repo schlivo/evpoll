@@ -228,6 +228,11 @@
     "last_updated": "octobre 2026"
   },
   "texts": {
-    "footer": "Site d'information réalisé pour les résidents de la Résidence Démo"
-  }
+    "footer": "Site d'information réalisé pour les résidents de la Résidence Démo",
+    "hero_kicker": "Parking du 1 rue de l'Exemple · sous-sol",
+    "hero_title": "Qui veut pouvoir recharger sa voiture ?",
+    "plan_caption": "Résidence Démo – sous-sol",
+    "paper_contact": ""
+  },
+  "_texts_comment": "texts : tous facultatifs. paper_contact = contact affiché dans « Pas de smartphone ? » (défaut : CONTACT_EMAIL)."
 }

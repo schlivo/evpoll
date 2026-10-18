@@ -4,843 +4,671 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Générateur de documents IRVE</title>
+    <!-- QR codes are generated locally: no URL (nor place code) is sent to a third party -->
+    <script src="/vendor/qrcode-generator-1.4.4.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+        @font-face { font-family: "Atkinson"; font-weight: 400; src: url(/fonts/atkinson-hyperlegible-latin-400-normal.woff2) format("woff2"); }
+        @font-face { font-family: "Atkinson"; font-weight: 700; src: url(/fonts/atkinson-hyperlegible-latin-700-normal.woff2) format("woff2"); }
+        @font-face { font-family: "Barlow C"; font-weight: 600; src: url(/fonts/barlow-condensed-latin-600-normal.woff2) format("woff2"); }
+        @font-face { font-family: "Barlow C"; font-weight: 700; src: url(/fonts/barlow-condensed-latin-700-normal.woff2) format("woff2"); }
+        @font-face { font-family: "Stencil"; font-weight: 800; src: url(/fonts/big-shoulders-stencil-display-latin-800-normal.woff2) format("woff2"); }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --asphalt: #2a2d32;
+            --paint: #f3f0e6;
+            --signal: #f2c230;
+            --paper: #faf8f3;
+            --ink: #1d2126;
+            --muted: #4a5260;
+            --rule: #d9d4c7;
+            --rose: #b0164f;
         }
 
-        body {
-            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #1a1a2e;
-            min-height: 100vh;
-            padding: 20px;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
 
-        .generator-container {
+        body {
+            font-family: Atkinson, sans-serif;
+            color: var(--ink);
+            background: #cfccc4;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* ===== Generator UI ===== */
+        .generator {
             max-width: 1400px;
             margin: 0 auto;
             display: grid;
             grid-template-columns: 360px 1fr;
-            gap: 30px;
+            gap: 28px;
             align-items: start;
         }
 
         @media (max-width: 900px) {
-            .generator-container {
-                grid-template-columns: 1fr;
-            }
+            .generator { grid-template-columns: 1fr; }
         }
 
-        /* Form Panel */
-        .form-panel {
-            background: #16213e;
-            border-radius: 16px;
-            padding: 24px;
-            color: white;
+        .panel {
+            background: var(--paper);
+            border-top: 4px solid var(--signal);
+            padding: 22px;
             position: sticky;
             top: 20px;
         }
 
         @media (max-width: 900px) {
-            .form-panel {
-                position: static;
-            }
+            .panel { position: static; }
         }
 
-        .form-panel h1 {
-            font-size: 1.5rem;
-            margin-bottom: 8px;
-            color: #22c55e;
-        }
-
-        .form-panel > p {
-            font-size: 0.875rem;
-            color: #94a3b8;
-            margin-bottom: 20px;
-        }
-
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 0.875rem;
-            font-weight: 500;
+        .panel h1 {
+            font: 700 26px/1 "Barlow C";
+            text-transform: uppercase;
             margin-bottom: 6px;
-            color: #e2e8f0;
         }
 
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 10px 14px;
-            border: 2px solid #334155;
-            border-radius: 8px;
-            background: #1e293b;
-            color: white;
-            font-size: 0.95rem;
-            font-family: inherit;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: #22c55e;
-        }
-
-        .form-group small {
-            display: block;
-            font-size: 0.75rem;
-            color: #64748b;
-            margin-top: 4px;
+        .panel > p {
+            font-size: 14px;
+            color: var(--muted);
+            margin-bottom: 18px;
         }
 
         .doc-types {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-bottom: 20px;
+            border: 2px solid var(--ink);
+            margin-bottom: 18px;
         }
 
         .doc-type {
-            padding: 10px;
-            border: 2px solid #334155;
-            border-radius: 8px;
-            background: #1e293b;
-            color: #e2e8f0;
-            font-family: inherit;
-            font-size: 0.8rem;
+            padding: 9px 10px;
+            border: 0;
+            background: #fff;
+            color: var(--ink);
+            font: 400 13px Atkinson, sans-serif;
             text-align: left;
             cursor: pointer;
         }
 
+        .doc-type:nth-child(odd) { border-right: 2px solid var(--ink); }
+        .doc-type:nth-child(-n+2) { border-bottom: 2px solid var(--ink); }
+
         .doc-type strong {
             display: block;
-            font-size: 0.875rem;
+            font: 700 15px "Barlow C";
+            text-transform: uppercase;
+            letter-spacing: .04em;
         }
 
         .doc-type.active {
-            border-color: #22c55e;
-            background: rgba(34, 197, 94, 0.12);
+            background: var(--ink);
+            color: var(--paint);
         }
 
-        .checkbox-label {
+        .field { margin-bottom: 14px; }
+
+        .field label {
+            display: block;
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .field input[type=text],
+        .field input[type=url],
+        .field input[type=date],
+        .field input[type=number] {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1px solid var(--muted);
+            background: #fff;
+            font: 400 15px Atkinson, sans-serif;
+            color: var(--ink);
+        }
+
+        .field input:focus {
+            outline: 3px solid var(--signal);
+            outline-offset: 0;
+        }
+
+        .field small {
+            display: block;
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        .check {
             display: flex;
-            align-items: center;
-            gap: 10px;
+            gap: 8px;
+            align-items: flex-start;
+            font-size: 14px;
             cursor: pointer;
-            font-size: 0.9rem;
         }
 
-        .checkbox-label input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            accent-color: #22c55e;
-        }
+        .check input { width: 18px; height: 18px; accent-color: var(--ink); margin-top: 1px; }
 
         .btn {
             width: 100%;
-            padding: 14px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            font-family: inherit;
+            padding: 13px 18px;
+            border: 0;
+            background: var(--signal);
+            color: var(--asphalt);
+            font: 700 18px "Barlow C";
+            text-transform: uppercase;
+            letter-spacing: .06em;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
             margin-bottom: 12px;
-            background: #22c55e;
-            color: white;
-        }
-
-        .btn:hover {
-            background: #16a34a;
         }
 
         .btn-small {
-            padding: 8px 12px;
-            font-size: 0.8rem;
+            width: auto;
+            padding: 6px 12px;
+            font-size: 14px;
             margin: 6px 0 0;
-            background: #334155;
+            background: #fff;
+            border: 2px solid var(--ink);
         }
 
-        .btn-small:hover {
-            background: #475569;
+        .warning {
+            border-left: 4px solid var(--rose);
+            background: #fff;
+            font-size: 13px;
+            padding: 8px 10px;
+            margin-bottom: 12px;
         }
 
-        .divider {
-            height: 1px;
-            background: #334155;
-            margin: 20px 0;
+        .info {
+            border-left: 4px solid var(--signal);
+            background: #fff;
+            font-size: 13px;
+            padding: 8px 10px;
+            margin-bottom: 12px;
+        }
+
+        .tips {
+            border-top: 1px solid var(--rule);
+            padding-top: 14px;
+            margin-top: 6px;
         }
 
         .tips h3 {
-            font-size: 0.875rem;
-            color: #22c55e;
-            margin-bottom: 10px;
+            font: 700 15px "Barlow C";
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            margin-bottom: 6px;
         }
 
         .tips ul {
             list-style: none;
-            font-size: 0.8rem;
-            color: #94a3b8;
-        }
-
-        .tips li {
-            padding: 4px 0 4px 16px;
-            position: relative;
-        }
-
-        .tips li::before {
-            content: "•";
-            position: absolute;
-            left: 0;
-            color: #22c55e;
-        }
-
-        .tips li strong {
-            color: #e2e8f0;
-        }
-
-        .warning {
-            background: rgba(245, 158, 11, 0.15);
-            border: 1px solid #f59e0b;
-            color: #fcd34d;
-            font-size: 0.8rem;
-            padding: 8px 12px;
-            border-radius: 8px;
+            font-size: 13px;
+            color: var(--muted);
             margin-bottom: 12px;
         }
 
-        /* Preview */
-        .preview-panel {
+        .tips li { padding: 3px 0; }
+        .tips li strong { color: var(--ink); }
+
+        .preview {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 20px;
+            gap: 16px;
             overflow-x: auto;
         }
 
-        .preview-header h2 {
-            color: white;
-            font-size: 1.1rem;
+        .preview h2 {
+            font: 700 18px "Barlow C";
+            text-transform: uppercase;
+            letter-spacing: .06em;
         }
 
         #printArea {
             display: flex;
+            flex-direction: column;
+            gap: 16px;
+            align-items: center;
+        }
+
+        #printArea.two-up {
+            flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: center;
             gap: 0;
         }
 
-        .page {
-            background: #ffffff;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
-            color: #1e293b;
-        }
-
-        .page-a4 { width: 210mm; height: 297mm; }
-        .page-a5 { width: 148mm; height: 210mm; }
-
         @media screen {
-            #printArea.doc-note,
-            #printArea.doc-a6,
-            #printArea.doc-relance {
-                zoom: 0.72;
-            }
+            #printArea.doc-note, #printArea.doc-a6, #printArea.doc-relance { zoom: .72; }
         }
 
         @media screen and (max-width: 900px) {
-            #printArea { zoom: 0.45 !important; }
+            #printArea { zoom: .45 !important; }
         }
 
         @media print {
-            body {
-                background: none !important;
-                padding: 0 !important;
-                margin: 0 !important;
-            }
-            .form-panel,
-            .preview-header {
-                display: none !important;
-            }
-            .generator-container {
-                display: block !important;
-                max-width: none !important;
-            }
-            .preview-panel {
-                display: block !important;
-                overflow: visible !important;
-            }
-            #printArea {
-                zoom: 1 !important;
-            }
-            .page {
-                box-shadow: none !important;
-            }
-            .placeholder {
-                background: none !important;
-                outline: none !important;
-            }
+            body { background: none; padding: 0; }
+            .panel, .preview h2 { display: none !important; }
+            .generator { display: block; max-width: none; }
+            .preview { display: block; overflow: visible; }
+            #printArea { zoom: 1 !important; gap: 0 !important; display: block; }
+            #printArea.two-up { display: flex; flex-wrap: nowrap; }
+            .sheet { box-shadow: none !important; break-after: page; }
+            .sheet:last-child { break-after: auto; }
+            .placeholder { background: none !important; outline: none !important; }
         }
 
-        /* Shared document styles */
+        /* ===== Documents (mock-ups of 18/10) ===== */
+        .sheet {
+            background: var(--paper);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 14px #0003;
+        }
+
+        .sheet-a4 { width: 210mm; height: 297mm; }
+        .sheet-a5 { width: 148mm; height: 210mm; }
+
         .placeholder {
-            background: #fef3c7;
-            outline: 1px dashed #f59e0b;
-            padding: 0 3px;
+            background: #fde68a;
+            outline: 1px dashed var(--rose);
+            padding: 0 2px;
         }
 
-        .brand {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+        .qr { display: block; }
+        .qr rect.on { fill: var(--ink); }
+
+        .hz {
+            flex: none;
+            height: 5mm;
+            background: repeating-linear-gradient(-45deg, var(--signal) 0 4mm, var(--asphalt) 4mm 8mm);
         }
 
-        .brand svg {
-            width: 34px;
-            height: 34px;
-        }
-
-        .brand span {
-            font-size: 24px;
-            font-weight: 800;
-            letter-spacing: 1px;
-        }
-
-        .badge {
-            display: inline-block;
-            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-            color: white;
-            font-size: 10px;
-            font-weight: 700;
-            padding: 4px 14px;
-            border-radius: 15px;
+        .kick {
+            font: 600 9pt "Barlow C";
+            letter-spacing: .14em;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            color: var(--signal);
         }
 
-        .green {
-            color: #16a34a;
-        }
-
-        .qr img {
-            display: block;
-        }
-
-        .qr-box {
-            background: white;
-            padding: 6px;
-            border-radius: 10px;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+        .date-tag {
             display: inline-block;
+            background: var(--signal);
+            color: var(--asphalt);
+            font: 700 12pt "Barlow C";
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            padding: 1.5mm 3mm;
         }
 
-        .sources {
-            font-size: 7px;
-            color: #64748b;
-            line-height: 1.4;
-        }
+        .src { font-size: 7pt; color: var(--muted); }
 
         /* A5 flyer */
-        .flyer {
-            padding: 14mm 12mm 10mm;
+        .a5 { display: flex; flex-direction: column; }
+
+        .a5 .band {
+            flex: none;
+            background: var(--asphalt) repeating-linear-gradient(90deg, transparent 0 17mm, #ffffff1c 17mm 17.6mm);
+            color: var(--paint);
+            padding: 9mm 10mm 8mm;
+        }
+
+        .a5 h1 {
+            font: 700 34pt/.95 "Barlow C";
+            text-transform: uppercase;
+            margin: 3mm 0;
+        }
+
+        .a5 .sub { font-size: 12pt; line-height: 1.35; color: #e9e5d9; }
+        .a5 .sub b { color: var(--paint); }
+
+        .a5 .body {
+            padding: 6mm 10mm 0;
+            font-size: 10.5pt;
+            line-height: 1.42;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .a5 .body p { margin-bottom: 3mm; }
+
+        .a5 .cta {
             display: flex;
-            flex-direction: column;
-            text-align: center;
-        }
-
-        .flyer .badge {
-            margin: 6px auto 12px;
-        }
-
-        .flyer h1 {
-            font-size: 27px;
-            line-height: 1.25;
-            margin-bottom: 6px;
-        }
-
-        .flyer .subtitle {
-            font-size: 17px;
-            font-weight: 600;
-            color: #334155;
-            line-height: 1.35;
-            margin-bottom: 16px;
-        }
-
-        .flyer .body {
-            font-size: 13px;
-            color: #475569;
-            line-height: 1.5;
-            margin-bottom: 18px;
-        }
-
-        .flyer .body strong {
-            color: #1e293b;
-        }
-
-        .cta {
-            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-            color: white;
-            border-radius: 12px;
-            padding: 12px;
-            display: flex;
+            gap: 6mm;
             align-items: center;
-            gap: 12px;
-            text-align: left;
-            margin-bottom: 18px;
+            border-top: 1.2pt solid var(--ink);
+            border-bottom: 1.2pt solid var(--ink);
+            padding: 5mm 0;
+            margin-top: 2mm;
         }
 
-        .cta p {
-            font-size: 16px;
-            font-weight: 700;
-            line-height: 1.35;
-        }
+        .a5 .cta .qr { width: 34mm; height: 34mm; flex: none; }
 
-        .cta small {
+        .a5 .ct { font: 700 19pt/1 "Barlow C"; text-transform: uppercase; }
+
+        .a5 .ct small {
             display: block;
-            font-size: 10px;
-            font-weight: 500;
-            margin-top: 4px;
-            opacity: 0.95;
+            font: 600 11pt "Barlow C";
+            letter-spacing: .06em;
+            color: var(--muted);
+            margin: 2.5mm 0 3mm;
+            text-transform: none;
         }
 
-        .flyer .qr img {
-            width: 40mm;
-            height: 40mm;
+        .a5 .steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4mm;
+            margin-top: 5mm;
+            font-size: 9pt;
+            line-height: 1.3;
         }
 
-        .points {
-            list-style: none;
-            text-align: left;
-            font-size: 12px;
-            color: #334155;
-            line-height: 1.5;
+        .a5 .steps span { display: block; font: 800 22pt/1 Stencil; margin-bottom: 1mm; }
+
+        .a5 .paper-box {
+            font-size: 9.5pt;
+            margin-top: 4mm;
+            padding: 3mm;
+            border: .8pt dashed var(--muted);
         }
 
-        .points li {
-            padding-left: 14px;
-            position: relative;
-            margin-bottom: 7px;
+        .a5 .note { font-size: 8.5pt; color: var(--muted); margin-top: 4mm; line-height: 1.4; }
+
+        .a5 .foot {
+            padding: 4mm 10mm 5mm;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 4mm;
+            font-size: 9pt;
         }
 
-        .points li::before {
-            content: "✓";
-            position: absolute;
-            left: 0;
-            color: #16a34a;
-            font-weight: 700;
-        }
+        .sig-name { font: 700 11pt "Barlow C"; text-transform: uppercase; letter-spacing: .05em; }
+        .a5 .src { text-align: right; }
 
-        .signature {
-            font-style: italic;
-            font-weight: 600;
-            color: #1e293b;
-        }
-
-        .flyer .footer {
-            margin-top: auto;
-            padding-top: 8px;
-            border-top: 1px solid #e2e8f0;
-        }
-
-        .flyer .footer .signature {
-            font-size: 11px;
-            margin-bottom: 4px;
-        }
-
-        /* A6 windshield sheet: 4 x A6 on A4 portrait */
+        /* A6 windshield flyers: 4 per A4 portrait, crop marks at the cut lines */
         .sheet-a6 {
             display: grid;
             grid-template-columns: 105mm 105mm;
             grid-template-rows: 148.5mm 148.5mm;
         }
 
-        .card-a6 {
-            padding: 9mm 8mm 8mm;
+        .a6 {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-right: .2mm dashed var(--rule);
+            border-bottom: .2mm dashed var(--rule);
+        }
+
+        .a6:nth-child(2n) { border-right: none; }
+        .a6:nth-child(n+3) { border-bottom: none; }
+        .a6.empty { background: #fff; }
+
+        .a6 .floor {
+            background: var(--asphalt);
+            height: 66mm;
+            position: relative;
+            border-left: 4mm solid var(--paint);
+            border-right: 4mm solid var(--paint);
             display: flex;
             flex-direction: column;
             align-items: center;
-            text-align: center;
-            border-right: 0.2mm dashed #cbd5e1;
-            border-bottom: 0.2mm dashed #cbd5e1;
+            justify-content: center;
+            color: var(--paint);
         }
 
-        .card-a6:nth-child(2n) { border-right: none; }
-        .card-a6:nth-child(n+3) { border-bottom: none; }
+        .a6 .floor .kick { position: absolute; top: 4mm; left: 0; right: 0; text-align: center; font-size: 7.5pt; }
+        .a6 .num { font: 800 84pt/.9 Stencil; }
+        .a6 .num.double { font-size: 60pt; }
+        .a6 .lot { font: 600 9pt "Barlow C"; letter-spacing: .1em; text-transform: uppercase; opacity: .85; margin-top: 1mm; }
+        .a6 .body { padding: 5mm 7mm 0; flex: 1; }
+        .a6 h2 { font: 700 17pt/1 "Barlow C"; text-transform: uppercase; }
+        .a6 .row { display: flex; gap: 4mm; align-items: center; margin-top: 4mm; }
+        .a6 .row .qr { width: 30mm; height: 30mm; flex: none; }
+        .a6 .t { font-size: 9.5pt; line-height: 1.35; }
+        .a6 .code { font: 700 10pt "Barlow C"; letter-spacing: .12em; margin-top: 2mm; }
+        .a6 .date-tag { font-size: 10pt; padding: 1mm 2.5mm; margin-top: 2.5mm; }
+        .a6 .foot { padding: 3mm 7mm 4mm; font-size: 7.5pt; color: var(--muted); display: flex; justify-content: space-between; }
+        .a6 .foot b { color: var(--ink); font: 700 9pt "Barlow C"; text-transform: uppercase; }
 
-        .card-a6 .brand svg { width: 30px; height: 30px; }
-        .card-a6 .brand span { font-size: 22px; }
-
-        .card-a6 .badge {
-            font-size: 9px;
-            margin: 6px 0 12px;
-        }
-
-        .card-a6 h2 {
-            font-size: 21px;
-            line-height: 1.25;
-            margin-bottom: 10px;
-        }
-
-        .card-a6 .lead {
-            font-size: 13px;
-            color: #475569;
-            line-height: 1.4;
-            margin-bottom: 14px;
-        }
-
-        .card-a6 .qr img {
-            width: 50mm;
-            height: 50mm;
-        }
-
-        .card-a6 .deadline {
-            font-size: 16px;
-            font-weight: 700;
-            margin-top: 14px;
-        }
-
-        .card-a6 .url {
-            font-size: 12px;
-            color: #16a34a;
-            font-weight: 600;
-        }
-
-        .card-a6 .signature {
-            font-size: 12px;
-            margin-top: auto;
-        }
-
-        .crop {
-            position: absolute;
-            background: #94a3b8;
-        }
-
-        .crop.v { width: 0.2mm; height: 4mm; }
-        .crop.h { width: 4mm; height: 0.2mm; }
+        .crop { position: absolute; background: var(--muted); }
+        .crop.v { width: .2mm; height: 4mm; }
+        .crop.h { width: 4mm; height: .2mm; }
 
         /* A4 official note */
-        .note {
-            padding: 20mm 20mm 16mm;
-            display: flex;
-            flex-direction: column;
-            font-size: 14.5px;
-            line-height: 1.65;
-            color: #1e293b;
+        .note-a4 { display: flex; flex-direction: column; }
+
+        .note-a4 .head {
+            background: var(--asphalt);
+            color: var(--paint);
+            padding: 12mm 18mm 9mm;
         }
 
-        .note-head {
+        .note-a4 h1 {
+            font: 700 28pt/1 "Barlow C";
+            text-transform: uppercase;
+            margin-top: 3mm;
+        }
+
+        .note-a4 .content {
+            padding: 9mm 18mm 0;
+            font-size: 12pt;
+            line-height: 1.55;
+            flex: 1;
+        }
+
+        .note-a4 .content p { margin-bottom: 4mm; }
+
+        .note-a4 .ask {
+            display: flex;
+            gap: 7mm;
+            align-items: center;
+            border-top: 1.2pt solid var(--ink);
+            border-bottom: 1.2pt solid var(--ink);
+            padding: 6mm 0;
+            margin: 3mm 0 6mm;
+        }
+
+        .note-a4 .ask .qr { width: 42mm; height: 42mm; flex: none; }
+        .note-a4 .ask p { margin-bottom: 2mm; }
+        .note-a4 .url { font-weight: 700; }
+
+        .note-a4 .foot {
+            padding: 6mm 18mm 9mm;
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            border-bottom: 3px solid #22c55e;
-            padding-bottom: 10px;
-            margin-bottom: 18px;
+            align-items: flex-end;
+            gap: 6mm;
+            font-size: 10pt;
         }
 
-        .note-head .copro {
-            font-weight: 700;
-            font-size: 13px;
-        }
-
-        .note-head .date {
-            font-size: 11px;
-            color: #64748b;
-        }
-
-        .note h1 {
-            font-size: 26px;
-            line-height: 1.3;
-            margin-bottom: 18px;
-        }
-
-        .note p {
-            margin-bottom: 12px;
-            text-align: justify;
-        }
-
-        .note .ask {
-            display: flex;
-            gap: 18px;
-            align-items: center;
-            background: #f0fdf4;
-            border-left: 4px solid #22c55e;
-            border-radius: 0 10px 10px 0;
-            padding: 14px 16px;
-            margin: 6px 0 16px;
-        }
-
-        .note .ask p {
-            margin-bottom: 6px;
-            text-align: left;
-        }
-
-        .note .ask .qr img {
-            width: 45mm;
-            height: 45mm;
-        }
-
-        .note .url {
-            font-weight: 700;
-            color: #16a34a;
-        }
-
-        .note .deadline {
-            font-size: 18px;
-            font-weight: 700;
-            text-align: center;
-            margin: 6px 0 20px;
-        }
-
-        .note .sign {
-            margin-top: auto;
-            text-align: right;
-        }
-
-        .note .sign .signature {
-            font-size: 13px;
-        }
-
-        .note .sources {
-            margin-top: 14px;
-            border-top: 1px solid #e2e8f0;
-            padding-top: 6px;
-            font-size: 9px;
-        }
-
-        .note .sources + .sources {
-            margin-top: 2px;
-            border-top: none;
-            padding-top: 0;
-        }
+        .note-a4 .foot .src { max-width: 90mm; }
 
         /* A4 reminder poster */
-        .poster {
-            padding: 22mm 18mm 16mm;
+        .poster { display: flex; flex-direction: column; }
+
+        .poster .band {
+            background: var(--asphalt) repeating-linear-gradient(90deg, transparent 0 23mm, #ffffff1c 23mm 23.8mm);
+            color: var(--paint);
+            padding: 16mm 16mm 12mm;
+            text-align: center;
+        }
+
+        .poster .count { font: 800 120pt/1 Stencil; color: var(--signal); margin-top: 6mm; }
+        .poster .count small { font: 700 40pt "Barlow C"; color: var(--paint); }
+        .poster .line { font: 700 30pt/1.05 "Barlow C"; text-transform: uppercase; }
+        .poster .and-you { font: 700 54pt/1 "Barlow C"; text-transform: uppercase; margin-top: 6mm; }
+
+        .poster .body {
+            flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
-            background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 45%);
+            padding: 12mm 18mm 0;
+            font-size: 15pt;
+            line-height: 1.45;
         }
 
-        .poster .brand svg { width: 48px; height: 48px; }
-        .poster .brand span { font-size: 34px; }
+        .poster .body .qr { width: 62mm; height: 62mm; margin: 8mm 0 3mm; }
+        .poster .body .url { font-weight: 700; }
+        .poster .body .date-tag { font-size: 18pt; margin-top: 6mm; }
+        .poster .foot { padding: 8mm 18mm 10mm; display: flex; justify-content: space-between; font-size: 11pt; }
 
-        .poster .badge {
-            font-size: 13px;
-            margin: 10px 0 26px;
+        /* Economic printing: dark areas become a black rule on paper */
+        .eco .a5 .band, .eco .note-a4 .head, .eco .poster .band {
+            background: var(--paper);
+            color: var(--ink);
+            border-bottom: 1.5pt solid var(--ink);
         }
 
-        .poster .already {
-            font-size: 30px;
-            font-weight: 600;
-            line-height: 1.2;
-        }
-
-        .poster .count {
-            font-size: 120px;
-            font-weight: 800;
-            line-height: 1;
-            color: #16a34a;
-            margin: 10px 0;
-        }
-
-        .poster .count small {
-            font-size: 44px;
-            color: #64748b;
-            font-weight: 700;
-        }
-
-        .poster .and-you {
-            font-size: 44px;
-            font-weight: 800;
-            margin: 6px 0 22px;
-        }
-
-        .poster .lead {
-            font-size: 17px;
-            color: #334155;
-            margin-bottom: 20px;
-            max-width: 150mm;
-        }
-
-        .poster .qr img {
-            width: 62mm;
-            height: 62mm;
-        }
-
-        .poster .url {
-            font-size: 16px;
-            font-weight: 700;
-            color: #16a34a;
-            margin-top: 10px;
-        }
-
-        .poster .deadline {
-            font-size: 22px;
-            font-weight: 700;
-            margin-top: 18px;
-        }
-
-        .poster .signature {
-            margin-top: auto;
-            font-size: 15px;
-        }
+        .eco .a5 .sub, .eco .a5 .sub b { color: var(--ink); }
+        .eco .kick { color: var(--ink); }
+        .eco .hz { background: none; border-bottom: 1.5pt solid var(--ink); height: 0; }
+        .eco .a6 .floor { background: var(--paper); color: var(--ink); border-left-color: var(--ink); border-right-color: var(--ink); border-left-width: 1.5mm; border-right-width: 1.5mm; }
+        .eco .poster .count { color: var(--ink); }
+        .eco .poster .count small { color: var(--ink); }
+        .eco .date-tag { background: none; border: 1.2pt solid var(--ink); }
     </style>
 </head>
 <body>
-    <div class="generator-container">
-        <!-- Form Panel -->
-        <div class="form-panel">
-            <h1>Générateur de documents</h1>
-            <p>Note, flyer, papillons pare-brise et affiche de relance pour la campagne</p>
+    <div class="generator">
+        <div class="panel">
+            <h1>Documents de campagne</h1>
+            <p>Note officielle, flyer, papillons pare-brise et affiche de relance.</p>
 
             <div class="doc-types" id="docTypes">
-                <button type="button" class="doc-type" data-doc="note"><strong>Note officielle</strong>A4 · halls, e-mail syndic</button>
-                <button type="button" class="doc-type" data-doc="a5"><strong>Flyer</strong>A5 · boîtes aux lettres</button>
-                <button type="button" class="doc-type" data-doc="a6"><strong>Pare-brise</strong>4 × A6 sur A4</button>
-                <button type="button" class="doc-type" data-doc="relance"><strong>Relance</strong>A4 · compteur</button>
+                <button type="button" class="doc-type" data-doc="note"><strong>Note A4</strong>halls, e-mail du syndic</button>
+                <button type="button" class="doc-type" data-doc="a5"><strong>Flyer A5</strong>boîtes aux lettres</button>
+                <button type="button" class="doc-type" data-doc="a6"><strong>Pare-brise A6</strong>un par lot, 4 par A4</button>
+                <button type="button" class="doc-type" data-doc="relance"><strong>Relance A4</strong>compteur</button>
             </div>
 
-            <div class="form-group">
+            <div class="field">
                 <label for="coproName">Nom de la copropriété</label>
-                <input type="text" id="coproName" placeholder="Ex : Les Jardins du Parc">
+                <input type="text" id="coproName">
             </div>
 
-            <div class="form-group">
+            <div class="field">
                 <label for="siteUrl">URL du site d'enquête</label>
-                <input type="url" id="siteUrl" placeholder="Ex : https://irve.exemple.fr">
-                <small>Le QR code pointe vers la réponse express : <span id="expressUrlHint"></span></small>
+                <input type="url" id="siteUrl">
+                <small>QR code vers la réponse express : <span id="expressUrlHint"></span></small>
             </div>
 
-            <div class="form-group">
+            <div class="field">
                 <label for="deadline">Date limite de réponse</label>
                 <input type="date" id="deadline">
                 <small>À fixer avec le syndic et le conseil syndical (J+21 du calendrier)</small>
             </div>
 
-            <div class="form-group">
+            <div class="field">
                 <label for="signature">Signature</label>
-                <input type="text" id="signature" placeholder="Ex : Le conseil syndical">
+                <input type="text" id="signature">
             </div>
 
-            <div class="form-group">
-                <label for="contact">Contact</label>
-                <input type="text" id="contact" placeholder="Ex : conseil-syndical@ma-copro.fr">
+            <div class="field">
+                <label for="contact">Contact (réponses sans smartphone)</label>
+                <input type="text" id="contact" placeholder="e-mail ou téléphone">
             </div>
 
-            <div class="form-group" id="relanceFields">
-                <label for="declaredCount">Places déclarées (N)</label>
+            <div class="field" id="relanceFields">
+                <label for="declaredCount">Places déclarées</label>
                 <input type="number" id="declaredCount" min="0">
-                <small>Rempli automatiquement depuis le compteur public, modifiable</small>
-                <button type="button" class="btn btn-small" id="refreshCount">Actualiser le compteur</button>
+                <small>Rempli depuis le compteur public (total seulement), modifiable</small>
+                <button type="button" class="btn btn-small" id="refreshCount">Actualiser</button>
                 <label for="totalSpots" style="margin-top: 10px;">Nombre total de places</label>
                 <input type="number" id="totalSpots" min="1">
             </div>
 
-            <div class="form-group" id="a5Options">
-                <label class="checkbox-label">
-                    <input type="checkbox" id="twoPerPage">
-                    <span>2 flyers A5 par page A4 paysage</span>
-                </label>
+            <div id="a6Status" class="info" hidden></div>
+
+            <div class="field" id="a5Options">
+                <label class="check"><input type="checkbox" id="twoPerPage"> 2 flyers A5 par page A4 paysage</label>
+            </div>
+
+            <div class="field">
+                <label class="check"><input type="checkbox" id="eco"> Impression économique (bandeaux en filet noir, sans aplats sombres)</label>
             </div>
 
             <div class="warning" id="missingWarning" hidden></div>
 
-            <button class="btn" id="printBtn">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z"/>
-                </svg>
-                Imprimer / PDF
-            </button>
-
-            <div class="divider"></div>
+            <button class="btn" id="printBtn">Imprimer / PDF</button>
 
             <div class="tips">
                 <h3>Calendrier de campagne</h3>
                 <ul id="calendar"></ul>
-            </div>
-
-            <div class="divider"></div>
-
-            <div class="tips">
-                <h3>Conseils d'impression</h3>
+                <h3>Impression</h3>
                 <ul>
-                    <li>Dans la boîte d'impression, choisissez <strong>Marges : aucune</strong> et cochez <strong>Graphiques d'arrière-plan</strong></li>
+                    <li>Boîte d'impression : <strong>Marges : aucune</strong>, <strong>Graphiques d'arrière-plan</strong> cochés</li>
                     <li>« Enregistrer en PDF » pour l'envoi au syndic</li>
-                    <li><strong>Pare-brise</strong> : découpez le long des traits de coupe (4 papillons A6 par feuille)</li>
-                    <li>Testez le QR code avant de lancer le tirage</li>
+                    <li><strong>Pare-brise</strong> : découper le long des traits de coupe</li>
+                    <li>Testez un QR code avant le tirage</li>
                 </ul>
             </div>
         </div>
 
-        <!-- Preview Panel -->
-        <div class="preview-panel">
-            <div class="preview-header">
-                <h2 id="previewTitle">Aperçu</h2>
-            </div>
+        <div class="preview">
+            <h2 id="previewTitle">Aperçu</h2>
             <div id="printArea"></div>
         </div>
     </div>
 
     <script>
-        const LOGO = `<svg viewBox="0 0 41 41" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19.0174 41V34.8697C11.0869 33.7988 5.125 27.1221 5.125 19.287V8.17377H10.9079V2.60075C10.9079 1.16924 12.1048 0 13.5812 0C15.0577 0 16.2434 1.16924 16.2434 2.60075V8.16285H26.2209V2.60075C26.2209 1.15832 27.4177 0 28.883 0C30.3483 0 31.5452 1.16924 31.5452 2.60075V8.16285H37.3393V19.2761C37.3393 27.1221 31.3774 33.7878 23.4469 34.8587V40.9891L19.0174 41ZM9.55446 19.287C9.55446 25.5813 14.7893 30.6954 21.2321 30.6954C27.675 30.6954 32.9098 25.5813 32.9098 19.287V12.5011H9.55446V19.287Z" fill="#16a34a"/></svg>`;
-
-        const SOURCES = 'Source : AFP / Connaissance des Énergies, 06/10/2026 (prix du gazole, coût de la recharge à domicile).';
-
+        const SOURCE = 'Source des chiffres : AFP / Connaissance des Énergies, 6 octobre 2026.';
         const DOC_TITLES = {
             note: 'Note d\'information A4',
             a5: 'Flyer A5',
-            a6: 'Papillons pare-brise (4 × A6 sur A4)',
+            a6: 'Papillons pare-brise (4 × A6 par A4)',
             relance: 'Affiche de relance A4'
         };
-
-        const PAGE_SIZES = {
-            note: 'A4 portrait',
-            a5: 'A5 portrait',
-            a6: 'A4 portrait',
-            relance: 'A4 portrait'
-        };
-
-        const DEFAULT_CONTACT = 'conseil-syndical@exemple.fr';
+        const PAGE_SIZES = { note: 'A4 portrait', a5: 'A5 portrait', a6: 'A4 portrait', relance: 'A4 portrait' };
+        // Placeholder addresses of the example configuration: never printed
+        const EXAMPLE_CONTACTS = ['conseil-syndical@exemple.fr', 'syndic@exemple.fr'];
+        // Place codes handed over by the admin page right after generating them
+        const CODES_STORAGE_KEY = 'evpoll_a6_codes';
 
         let currentDoc = 'note';
-        // "Copro – address · Parking : …" line, from the instance config
-        let coproAddress = '';
+        let config = {};
         let pageStyleElement = null;
 
         const $ = (id) => document.getElementById(id);
 
         const escapeHtml = (str) => String(str)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
         // Missing values stay visible as highlighted [placeholders] in the preview
         const field = (value, placeholder) => value
             ? escapeHtml(value)
             : `<span class="placeholder">[${placeholder}]</span>`;
 
-        function formatDate(iso, withWeekday = false) {
+        function formatDate(iso, short = false) {
             if (!iso) return '';
             const date = new Date(iso + 'T12:00:00');
-            const options = { day: 'numeric', month: 'long', year: 'numeric' };
-            if (withWeekday) options.weekday = 'long';
-            return date.toLocaleDateString('fr-FR', options);
+            return short
+                ? date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+                : date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+        }
+
+        /** QR code as inline SVG, generated in the browser */
+        function qrSvg(text) {
+            const qr = qrcode(0, 'M');
+            qr.addData(text);
+            qr.make();
+            const n = qr.getModuleCount();
+            const q = 2; // quiet zone
+            let cells = '';
+            for (let r = 0; r < n; r++) {
+                for (let c = 0; c < n; c++) {
+                    if (qr.isDark(r, c)) cells += `<rect class="on" x="${c + q}" y="${r + q}" width="1.02" height="1.02"/>`;
+                }
+            }
+            return `<svg class="qr" viewBox="0 0 ${n + 2 * q} ${n + 2 * q}" shape-rendering="crispEdges" role="img" aria-label="QR code"><rect width="100%" height="100%" fill="#fff"/>${cells}</svg>`;
         }
 
         function getState() {
@@ -848,130 +676,180 @@
             const contact = $('contact').value.trim();
             return {
                 copro: $('coproName').value.trim(),
-                address: coproAddress,
                 siteUrl,
                 expressUrl: `${siteUrl}/?express=1`,
                 displayUrl: siteUrl.replace(/^https?:\/\//, ''),
                 deadline: formatDate($('deadline').value),
+                deadlineShort: formatDate($('deadline').value, true),
                 signature: $('signature').value.trim(),
-                contact: contact === DEFAULT_CONTACT ? '' : contact,
+                contact: EXAMPLE_CONTACTS.includes(contact) ? '' : contact,
                 declared: $('declaredCount').value,
-                total: $('totalSpots').value
+                total: $('totalSpots').value,
+                address: [
+                    config.copro_address ? `${config.copro_name} – ${config.copro_address}` : '',
+                    config.parking_address ? `Parking : ${config.parking_address}` : ''
+                ].filter(Boolean).join(' · ')
             };
         }
 
-        const qrSrc = (url, size = 400) =>
-            `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}&color=1e293b&bgcolor=ffffff&qzone=1`;
-
-        const qr = (s) => `<div class="qr"><div class="qr-box"><img src="${qrSrc(s.expressUrl)}" alt="QR code vers la réponse express"></div></div>`;
-
         function renderNote(s) {
-            const today = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
             return `
-            <div class="page page-a4 note">
-                <div class="note-head">
-                    <span class="copro">${field(s.copro, 'copropriété')}</span>
-                    <span class="date">${escapeHtml(today)}</span>
+            <div class="sheet sheet-a4 note-a4">
+                <div class="head">
+                    <div class="kick">${field(s.copro, 'copropriété')} · Information du conseil syndical</div>
+                    <h1>Bornes de recharge dans le parking</h1>
                 </div>
-                <h1>Information du conseil syndical<br><span class="green">Bornes de recharge dans le parking</span></h1>
-                <p>
-                    La copropriété étudie l'équipement du parking en sous-sol pour la recharge des véhicules électriques.
-                    Plusieurs solutions sont à l'étude, dont une infrastructure collective <strong>préfinancée par Enedis,
-                    sans coût pour la copropriété</strong> ; d'éventuels frais annexes (honoraires de suivi, adaptation du local électrique)
-                    seront chiffrés avant l'assemblée générale. Les devis y seront présentés et votés.
-                </p>
-                <p>
-                    <strong>Pourquoi maintenant ?</strong> Avec un gazole au-dessus de 2 €/l, rouler en électrique revient
-                    2 à 3 fois moins cher… à condition de pouvoir recharger chez soi. Équiper le parking, c'est aussi valoriser chaque place.
-                </p>
-                <div class="ask">
-                    <div>
-                        <p><strong>Ce que nous vous demandons :</strong> indiquer votre <strong>numéro de place</strong> et votre intérêt,
-                        même sans véhicule électrique aujourd'hui. Cela prend 30 secondes : scannez le QR code
-                        ou rendez-vous sur <span class="url">${escapeHtml(s.displayUrl)}</span>.</p>
-                        <p>Les propriétaires qui se déclarent avant les travaux pourront raccorder leur place à moindre coût.</p>
+                <div class="hz"></div>
+                <div class="content">
+                    <p>La copropriété étudie l'équipement du parking pour la recharge des véhicules électriques.
+                    Plusieurs solutions sont à l'étude, dont une infrastructure collective <b>préfinancée par Enedis,
+                    sans coût pour la copropriété</b> ; d'éventuels frais annexes (honoraires de suivi, adaptation du
+                    local électrique) seront chiffrés avant l'assemblée générale, où les devis seront présentés et votés.</p>
+                    <p><b>Pourquoi maintenant ?</b> Avec un gazole au-dessus de 2 €/l, rouler en électrique revient
+                    2 à 3 fois moins cher… à condition de pouvoir recharger chez soi.</p>
+                    <div class="ask">
+                        ${qrSvg(s.expressUrl)}
+                        <div>
+                            <p><b>Ce que nous vous demandons :</b> indiquer votre <b>numéro de place</b> et votre intérêt,
+                            même sans véhicule électrique aujourd'hui. 30 secondes : scannez le QR code ou allez sur
+                            <span class="url">${escapeHtml(s.displayUrl)}</span>.</p>
+                            <p>Se déclarer avant les travaux permet de raccorder sa place à moindre coût.</p>
+                            <span class="date-tag">Avant le ${field(s.deadline, 'date')}</span>
+                        </div>
                     </div>
-                    ${qr(s)}
+                    <p>Pas de smartphone ? Écrivez à ${field(s.contact, 'contact')} en indiquant votre n° de place et votre réponse.</p>
+                    <p class="src">Consultation indicative : seule l'assemblée générale décide. Une réponse par place ; en cas de réponses
+                    contradictoires, le conseil syndical vérifie. Réponses jamais affichées individuellement.</p>
                 </div>
-                <p class="deadline">Réponse souhaitée avant le ${field(s.deadline, 'date')}.</p>
-                <div class="sign">
-                    <p class="signature">${field(s.signature, 'signature')}</p>
-                    <p>Contact : ${field(s.contact, 'contact')}</p>
+                <div class="foot">
+                    <div><div class="sig-name">${field(s.signature, 'signature')}</div>${s.address ? `<div class="src">${escapeHtml(s.address)}</div>` : ''}</div>
+                    <div class="src">${SOURCE}</div>
                 </div>
-                ${s.address ? `<p class="sources">${escapeHtml(s.address)}</p>` : ''}
-                <p class="sources">${SOURCES}</p>
             </div>`;
         }
 
-        function renderFlyerA5(s) {
+        function renderA5(s) {
             return `
-            <div class="page page-a5 flyer">
-                <div class="brand">${LOGO}<span>IRVE</span></div>
-                <span class="badge">${field(s.copro, 'copropriété')}</span>
-                <h1>Le gazole à plus de 2&nbsp;€&nbsp;?</h1>
-                <p class="subtitle">L'électrique coûte <span class="green">2 à 3 fois moins cher</span>…<br>si l'on peut recharger chez soi.</p>
-                <p class="body">
-                    La copropriété étudie l'équipement du parking : <strong>sans coût pour la copropriété</strong>
-                    (infrastructure préfinancée par Enedis). Chaque intéressé paiera son raccordement et sa borne,
-                    en partie couverts par la prime ADVENIR, <strong>moins cher s'il se déclare avant les travaux</strong>.
-                </p>
-                <div class="cta">
-                    ${qr(s)}
-                    <p>Indiquez votre n° de place en 30 secondes avant le ${field(s.deadline, 'date')}.
-                        <small>Scannez le QR code ou allez sur ${escapeHtml(s.displayUrl)}</small>
-                    </p>
+            <div class="sheet sheet-a5 a5">
+                <div class="band">
+                    <div class="kick">${field(s.copro, 'copropriété')} · Parking</div>
+                    <h1>Le gazole à plus de 2&nbsp;€&nbsp;?</h1>
+                    <div class="sub">Rouler électrique coûte <b>2 à 3 fois moins cher</b>… à condition de pouvoir recharger chez soi.</div>
                 </div>
-                <ul class="points">
-                    <li>Même sans véhicule électrique aujourd'hui : votre réponse sert à dimensionner le projet.</li>
-                    <li>Rien n'est décidé : les devis seront présentés et votés en assemblée générale.</li>
-                    <li>Vos réponses servent uniquement au projet et ne sont diffusées que de façon agrégée, sans nom.</li>
-                </ul>
-                <div class="footer">
-                    <p class="signature">${field(s.signature, 'signature')}</p>
-                    ${s.address ? `<p class="sources">${escapeHtml(s.address)}</p>` : ''}
-                    <p class="sources">${SOURCES}</p>
+                <div class="hz"></div>
+                <div class="body">
+                    <p>La copropriété étudie l'équipement du parking pour la recharge. L'infrastructure peut être
+                    <b>préfinancée par Enedis, sans coût pour la copropriété</b>. Chaque intéressé paiera ensuite son
+                    raccordement et sa borne, en partie couverts par la prime ADVENIR, <b>moins cher s'il se déclare
+                    avant les travaux</b>.</p>
+                    <div class="cta">
+                        ${qrSvg(s.expressUrl)}
+                        <div class="ct">Indiquez votre n° de place
+                            <small>30 secondes · même sans véhicule électrique aujourd'hui</small>
+                            <span class="date-tag">Avant le ${field(s.deadline, 'date')}</span>
+                        </div>
+                    </div>
+                    <div class="steps">
+                        <div><span>1</span>Vous indiquez votre place</div>
+                        <div><span>2</span>Le conseil syndical compile et consulte Enedis et des opérateurs</div>
+                        <div><span>3</span>L'assemblée générale décide</div>
+                    </div>
+                    <p class="paper-box"><b>Pas de smartphone ?</b> Écrivez à ${field(s.contact, 'contact')} en indiquant
+                    votre n° de place et votre réponse (oui / peut-être / non).</p>
+                    <p class="note">Consultation indicative : seule l'assemblée générale décide. Réponse jamais affichée
+                    individuellement. ${escapeHtml(s.displayUrl)}</p>
+                </div>
+                <div class="foot">
+                    <div><div class="sig-name">${field(s.signature, 'signature')}</div>${s.address ? `<div class="src">${escapeHtml(s.address)}</div>` : ''}</div>
+                    <div class="src">${SOURCE}</div>
                 </div>
             </div>`;
         }
 
-        function renderCardA6(s) {
+        // One windshield flyer per lot (a double lot gets a single flyer "83-84")
+        function getLots() {
+            const lots = config.lots?.length
+                ? config.lots
+                : Array.from({ length: Number(config.parking_spots) || 0 }, (_, i) => ({ lot: null, places: [i + 1], type: 'simple' }));
+            return [...lots].sort((a, b) => a.places[0] - b.places[0]);
+        }
+
+        function getCodes() {
+            try {
+                const list = JSON.parse(sessionStorage.getItem(CODES_STORAGE_KEY) || '[]');
+                return new Map(list.map(c => [c.places.join('-'), c.code]));
+            } catch (e) {
+                return new Map();
+            }
+        }
+
+        function renderA6Card(s, lot, code) {
+            const places = lot.places.join('-');
+            const url = `${s.siteUrl}/enquete?express=1&p=${encodeURIComponent(places)}${code ? `&c=${encodeURIComponent(code)}` : ''}`;
+            const lotLine = [
+                lot.lot ? `Lot n°${lot.lot}` : '',
+                lot.places.length > 1 ? 'places doubles' : 'place simple'
+            ].filter(Boolean).join(' · ');
             return `
-            <div class="card-a6">
-                <div class="brand">${LOGO}<span>IRVE</span></div>
-                <span class="badge">${field(s.copro, 'copropriété')}</span>
-                <h2>Des bornes de recharge<br>dans notre parking&nbsp;?</h2>
-                <p class="lead">Indiquez votre <strong>n° de place</strong> en 30 secondes, même sans véhicule électrique.</p>
-                ${qr(s)}
-                <p class="deadline">Avant le ${field(s.deadline, 'date')}</p>
-                <p class="url">${escapeHtml(s.displayUrl)}</p>
-                <p class="signature">${field(s.signature, 'signature')}</p>
+            <div class="a6">
+                <div class="floor">
+                    <div class="kick">${field(s.copro, 'copropriété')} · Parking</div>
+                    <div class="num ${lot.places.length > 1 ? 'double' : ''}">${escapeHtml(places)}</div>
+                    <div class="lot">${escapeHtml(lotLine)}</div>
+                </div>
+                <div class="hz"></div>
+                <div class="body">
+                    <h2>Votre place, prête pour la recharge&nbsp;?</h2>
+                    <div class="row">
+                        ${qrSvg(url)}
+                        <div class="t">Scannez : <b>30 secondes</b>, votre réponse pour cette place, même sans véhicule électrique.
+                            ${code ? `<div class="code">Code ${escapeHtml(code)}</div>` : ''}
+                            <span class="date-tag">Avant le ${field(s.deadlineShort, 'date')}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="foot"><span><b>${field(s.signature, 'signature')}</b></span><span>Consultation indicative · l'AG décide</span></div>
             </div>`;
         }
 
-        function renderSheetA6(s) {
-            // Crop marks at the cut lines (105 mm, 148.5 mm), kept inside the printable area
+        function renderA6(s) {
+            const codes = getCodes();
+            const lots = getLots();
             const marks = [
-                'left:105mm;top:1mm', 'left:105mm;bottom:1mm',
-                'top:148.5mm;left:1mm', 'top:148.5mm;right:1mm'
+                'left:105mm;top:0', 'left:105mm;bottom:0', 'top:148.5mm;left:0', 'top:148.5mm;right:0'
             ].map((pos, i) => `<span class="crop ${i < 2 ? 'v' : 'h'}" style="${pos}"></span>`).join('');
-            return `<div class="page page-a4 sheet-a6">${renderCardA6(s).repeat(4)}${marks}</div>`;
+            const sheets = [];
+            for (let i = 0; i < lots.length; i += 4) {
+                const cards = lots.slice(i, i + 4).map(lot => renderA6Card(s, lot, codes.get(lot.places.join('-'))));
+                while (cards.length < 4) cards.push('<div class="a6 empty"></div>');
+                sheets.push(`<div class="sheet sheet-a4 sheet-a6">${cards.join('')}${marks}</div>`);
+            }
+            const status = $('a6Status');
+            status.hidden = false;
+            status.innerHTML = codes.size
+                ? `${lots.length} papillons sur ${sheets.length} feuilles, avec codes de place (générés dans l'admin). Les codes ne sont gardés que dans cet onglet.`
+                : `${lots.length} papillons sur ${sheets.length} feuilles, <b>sans code de place</b> : les réponses seront « déclaratives ». Générez les codes depuis l'admin (section Papillons pare-brise) pour des réponses vérifiées.`;
+            return sheets.join('') || '<p>Aucune place configurée pour cette instance.</p>';
         }
 
         function renderRelance(s) {
             return `
-            <div class="page page-a4 poster">
-                <div class="brand">${LOGO}<span>IRVE</span></div>
-                <span class="badge">${field(s.copro, 'copropriété')}</span>
-                <p class="already">Déjà</p>
-                <p class="count">${field(s.declared, 'N')}<small> / ${field(s.total, 'total')}</small></p>
-                <p class="already">places déclarées</p>
-                <p class="and-you">Et vous&nbsp;?</p>
-                <p class="lead">Indiquez votre numéro de place en 30 secondes, même sans véhicule électrique.
+            <div class="sheet sheet-a4 poster">
+                <div class="band">
+                    <div class="kick">${field(s.copro, 'copropriété')} · Parking</div>
+                    <div class="count">${field(s.declared, 'N')}<small> / ${field(s.total, 'total')}</small></div>
+                    <div class="line">places déjà déclarées</div>
+                    <div class="and-you">Et vous&nbsp;?</div>
+                </div>
+                <div class="hz"></div>
+                <div class="body">
+                    <p>Indiquez votre numéro de place en 30 secondes, même sans véhicule électrique.
                     Les places déclarées avant les travaux pourront être raccordées à moindre coût.</p>
-                ${qr(s)}
-                <p class="url">${escapeHtml(s.displayUrl)}</p>
-                <p class="deadline">Avant le ${field(s.deadline, 'date')}</p>
-                <p class="signature">${field(s.signature, 'signature')}</p>
+                    ${qrSvg(s.expressUrl)}
+                    <p class="url">${escapeHtml(s.displayUrl)}</p>
+                    <span class="date-tag">Avant le ${field(s.deadline, 'date')}</span>
+                </div>
+                <div class="foot"><span class="sig-name">${field(s.signature, 'signature')}</span><span class="src">Consultation indicative · seule l'AG décide</span></div>
             </div>`;
         }
 
@@ -980,14 +858,16 @@
             const area = $('printArea');
             const twoPerPage = currentDoc === 'a5' && $('twoPerPage').checked;
 
+            $('a6Status').hidden = true;
             let html;
             if (currentDoc === 'note') html = renderNote(s);
-            else if (currentDoc === 'a5') html = renderFlyerA5(s).repeat(twoPerPage ? 2 : 1);
-            else if (currentDoc === 'a6') html = renderSheetA6(s);
+            else if (currentDoc === 'a5') html = renderA5(s).repeat(twoPerPage ? 2 : 1);
+            else if (currentDoc === 'a6') html = renderA6(s);
             else html = renderRelance(s);
 
             area.innerHTML = html;
-            area.className = `doc-${currentDoc}`;
+            area.className = `doc-${currentDoc}${twoPerPage ? ' two-up' : ''}`;
+            document.body.classList.toggle('eco', $('eco').checked);
             $('previewTitle').textContent = `Aperçu : ${DOC_TITLES[currentDoc]}`;
             $('expressUrlHint').textContent = s.expressUrl;
 
@@ -1000,7 +880,7 @@
             const missing = [];
             if (!s.deadline) missing.push('date limite');
             if (!s.signature) missing.push('signature');
-            if (currentDoc === 'note' && !s.contact) missing.push('contact');
+            if (['note', 'a5'].includes(currentDoc) && !s.contact) missing.push('contact');
             if (currentDoc === 'relance' && (s.declared === '' || !s.total)) missing.push('compteur');
             $('missingWarning').hidden = missing.length === 0;
             $('missingWarning').textContent = `À compléter avant impression : ${missing.join(', ')}.`;
@@ -1031,18 +911,8 @@
         function updatePageStyle(twoPerPage) {
             if (pageStyleElement) pageStyleElement.remove();
             pageStyleElement = document.createElement('style');
-            const size = twoPerPage ? 'A4 landscape' : PAGE_SIZES[currentDoc];
-            pageStyleElement.textContent = `@page { size: ${size}; margin: 0; }`;
+            pageStyleElement.textContent = `@page { size: ${twoPerPage ? 'A4 landscape' : PAGE_SIZES[currentDoc]}; margin: 0; }`;
             document.head.appendChild(pageStyleElement);
-        }
-
-        function printDoc() {
-            // Wait for every QR image so none prints blank
-            const images = [...$('printArea').querySelectorAll('img')];
-            Promise.all(images.map(img => img.complete
-                ? Promise.resolve()
-                : new Promise(resolve => { img.onload = resolve; img.onerror = resolve; })
-            )).then(() => window.print());
         }
 
         async function loadCounter() {
@@ -1051,9 +921,7 @@
                 if (response.ok) {
                     const counter = await response.json();
                     $('declaredCount').value = counter.declared_spots ?? '';
-                    if (counter.parking_spots && !$('totalSpots').value) {
-                        $('totalSpots').value = counter.parking_spots;
-                    }
+                    if (counter.parking_spots && !$('totalSpots').value) $('totalSpots').value = counter.parking_spots;
                     render();
                 }
             } catch (e) {
@@ -1061,24 +929,18 @@
             }
         }
 
-        // Load config from API and pre-fill
         async function loadConfig() {
             $('siteUrl').value = window.location.origin;
             try {
                 const response = await fetch('/api/config');
                 if (response.ok) {
-                    const config = await response.json();
+                    config = await response.json();
                     $('coproName').value = config.copro_name || '';
                     $('signature').value = config.campaign_signature || '';
                     $('deadline').value = config.campaign_deadline || '';
-                    if (config.contact_email && config.contact_email !== DEFAULT_CONTACT) {
-                        $('contact').value = config.contact_email;
-                    }
+                    const contact = config.texts?.paper_contact || config.contact_email || '';
+                    if (!EXAMPLE_CONTACTS.includes(contact)) $('contact').value = contact;
                     if (config.parking_spots) $('totalSpots').value = config.parking_spots;
-                    coproAddress = [
-                        config.copro_address ? `${config.copro_name} – ${config.copro_address}` : '',
-                        config.parking_address ? `Parking : ${config.parking_address}` : ''
-                    ].filter(Boolean).join(' · ');
                 }
             } catch (e) {
                 console.error('Failed to load config:', e);
@@ -1088,15 +950,12 @@
         }
 
         document.querySelectorAll('.doc-type').forEach(btn => {
-            btn.addEventListener('click', () => {
-                currentDoc = btn.dataset.doc;
-                render();
-            });
+            btn.addEventListener('click', () => { currentDoc = btn.dataset.doc; render(); });
         });
-        ['coproName', 'siteUrl', 'deadline', 'signature', 'contact', 'declaredCount', 'totalSpots', 'twoPerPage']
+        ['coproName', 'siteUrl', 'deadline', 'signature', 'contact', 'declaredCount', 'totalSpots', 'twoPerPage', 'eco']
             .forEach(id => $(id).addEventListener('input', render));
         $('refreshCount').addEventListener('click', loadCounter);
-        $('printBtn').addEventListener('click', printDoc);
+        $('printBtn').addEventListener('click', () => window.print());
 
         // Optional ?doc=note|a5|a6|relance to open a given document
         const requestedDoc = new URLSearchParams(location.search).get('doc');

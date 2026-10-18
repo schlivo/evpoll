@@ -5,7 +5,7 @@
 // admin parking plan) comes from an instance directory:
 //
 //   INSTANCE_DIR/instance.json       (see instances/demo/instance.json)
-//   INSTANCE_DIR/plan/parking.json   (optional, admin parking plan coordinates)
+//   INSTANCE_DIR/plan/places.json    (optional, parking plan geometry)
 //
 // The physical description (copro, entrances, staircases, parking lots) can
 // live in a separate file given by PARKING_CONFIG (same keys: copro,
@@ -116,13 +116,22 @@ export const PRIVACY = {
   host: instance.privacy?.host || '',
   retention_days: envInt('RETENTION_DAYS') || instance.privacy?.retention_days || 730,
   audit_retention_days: envInt('AUDIT_RETENTION_DAYS') || instance.privacy?.audit_retention_days || 365,
+  // Keyed IP hash kept on answers to flag "same IP" conflicts, then purged
+  ip_hash_retention_days: envInt('IP_HASH_RETENTION_DAYS') || instance.privacy?.ip_hash_retention_days || 30,
   last_updated: instance.privacy?.last_updated || ''
 };
 
 // Short instance texts (footer...) shown by the generic views
 export const TEXTS = instance.texts || {};
 
-/** Optional admin parking plan: { width, height, spots: { "1": { x, y, w, h } } } */
+/**
+ * Optional parking plan, INSTANCE_DIR/plan/places.json:
+ * { viewBox: [x, y, w, h], places: { "1": [[x, y], ...] }, walls: [[[x, y], [x, y]], ...] }
+ * It only describes geometry: it is public and never carries answers.
+ */
 export function loadParkingPlan() {
-  return INSTANCE_DIR ? readJson(join(INSTANCE_DIR, 'plan', 'parking.json')) : null;
+  if (!INSTANCE_DIR) return null;
+  const plan = readJson(join(INSTANCE_DIR, 'plan', 'places.json'));
+  if (!plan?.places) return null;
+  return { viewBox: plan.viewBox, places: plan.places, walls: plan.walls || [] };
 }

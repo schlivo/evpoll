@@ -1,12 +1,6 @@
-<script setup>
-import SvgIcon from '../components/SvgIcon.vue'
-</script>
-
 <template>
-  <div class="page">
-    <div class="container">
-      <header class="page-header">
-        <h1>Comment ça se finance ?</h1>
+  <div class="info-view">
+      <header class="info-intro">
         <p>
           Avec l'infrastructure collective préfinancée par Enedis, la copropriété
           n'investit pas dans l'infrastructure. Seuls les utilisateurs payent leur raccordement et leur borne,
@@ -16,11 +10,8 @@ import SvgIcon from '../components/SvgIcon.vue'
 
       <section class="main-principle">
         <div class="principle-card">
-          <div class="principle-icon enedis-logo">
-              <SvgIcon name="enedis" :size="48" />
-            </div>
           <div class="principle-content">
-            <h2>Enedis préfinance l'infrastructure</h2>
+            <h4>Enedis préfinance l'infrastructure</h4>
             <p>
               Enedis installe la <strong>colonne horizontale</strong> (le câblage principal
               dans le parking) sans aucun investissement de la copropriété.
@@ -41,7 +32,7 @@ import SvgIcon from '../components/SvgIcon.vue'
       </section>
 
       <section class="cost-section">
-        <h2>Ce que paye chaque utilisateur</h2>
+        <h4>Ce que paye chaque utilisateur</h4>
 
         <div class="cost-grid">
           <div class="cost-card">
@@ -97,12 +88,12 @@ import SvgIcon from '../components/SvgIcon.vue'
       </section>
 
       <section class="aids-section">
-        <h2>Les aides pour réduire votre coût</h2>
+        <h4>Les aides pour réduire votre coût</h4>
 
         <div class="aids-grid">
           <div class="aid-card featured">
             <div class="aid-badge">Jusqu'à 1 000 € HT</div>
-            <h3>Prime ADVENIR : borne individuelle</h3>
+            <h5>Prime ADVENIR : borne individuelle</h5>
             <p>
               Le programme ADVENIR finance <strong>50 % du coût HT de votre borne</strong>,
               plafonné à 1 000 € HT par point individuel depuis le 1<sup>er</sup> avril 2026.
@@ -117,7 +108,7 @@ import SvgIcon from '../components/SvgIcon.vue'
 
           <div class="aid-card">
             <div class="aid-badge secondary">Jusqu'à 12 500 € HT</div>
-            <h3>Prime ADVENIR : infrastructure collective</h3>
+            <h5>Prime ADVENIR : infrastructure collective</h5>
             <p>
               Pour les travaux en parties communes : 50 % du coût HT, plafonné à 12 500 € HT
               jusqu'à 100 places, si l'assemblée générale vote à partir du 1<sup>er</sup> avril 2026.
@@ -126,7 +117,7 @@ import SvgIcon from '../components/SvgIcon.vue'
 
           <div class="aid-card">
             <div class="aid-badge secondary">Selon devis</div>
-            <h3>TVA réduite</h3>
+            <h5>TVA réduite</h5>
             <p>
               TVA réduite possible sur la fourniture et la pose d'une borne,
               <strong>sous conditions, à confirmer sur le devis</strong>.
@@ -137,7 +128,7 @@ import SvgIcon from '../components/SvgIcon.vue'
       </section>
 
       <section class="example-section">
-        <h2>Exemple : les postes de coût</h2>
+        <h4>Exemple : les postes de coût</h4>
         <div class="example-card">
           <p class="example-intro">
             Pour un copropriétaire qui se déclare avant les travaux, avec une borne
@@ -175,11 +166,8 @@ import SvgIcon from '../components/SvgIcon.vue'
       </section>
 
       <section class="why-section">
-        <h2>Pourquoi répondre à l'enquête ?</h2>
+        <h4>Pourquoi répondre à l'enquête ?</h4>
         <div class="why-card">
-          <div class="why-icon">
-              <SvgIcon name="chart-up" :size="40" />
-            </div>
           <div class="why-content">
             <p>
               <strong>Des chiffres réels pour décider en AG.</strong>
@@ -194,53 +182,39 @@ import SvgIcon from '../components/SvgIcon.vue'
       </section>
 
       <section class="sources-section">
-        <h3>Sources et liens utiles</h3>
+        <h5>Sources et liens utiles</h5>
         <ul class="sources-list">
           <li>
-            <span class="source-favicon source-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-            </span>
             <a href="https://advenir.mobi/" target="_blank" rel="noopener">
               Programme ADVENIR officiel
             </a>
             <span class="source-desc">Primes et conditions d'éligibilité</span>
           </li>
           <li>
-            <span class="source-favicon source-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            </span>
             <a href="https://www.isiohm.fr/prime-advenir" target="_blank" rel="noopener">
               Isiohm : barèmes ADVENIR avril 2026
             </a>
             <span class="source-desc">Plafonds borne individuelle et infrastructure collective</span>
           </li>
           <li>
-            <span class="source-favicon source-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            </span>
             <a href="https://www.electro-mob.com/colonne-horizontale-enedis-borne-recharge" target="_blank" rel="noopener">
               Electro-Mob
             </a>
             <span class="source-desc">Colonne horizontale Enedis et quote-part 2026</span>
           </li>
           <li>
-            <span class="source-favicon source-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            </span>
             <a href="https://isiohm.fr/aides/" target="_blank" rel="noopener">
               Isiohm : aides 2026
             </a>
             <span class="source-desc">Aides en vigueur en 2026</span>
           </li>
           <li>
-            <SvgIcon name="enedis" :size="20" class="source-favicon enedis-logo" />
             <a href="https://www.enedis.fr/reseau-electrique-auto-prefinancement" target="_blank" rel="noopener">
               Enedis : préfinancement
             </a>
             <span class="source-desc">Quote-part 2026 et dérivation individuelle (barème 2025)</span>
           </li>
           <li>
-            <SvgIcon name="enedis" :size="20" class="source-favicon enedis-logo" />
             <a href="https://www.enedis.fr/presse/le-reseau-electrique-auto-la-solution-enedis-en-faveur-de-la-mobilite-electrique-dans-les" target="_blank" rel="noopener">
               Enedis
             </a>
@@ -249,291 +223,150 @@ import SvgIcon from '../components/SvgIcon.vue'
         </ul>
       </section>
 
-    </div>
   </div>
 </template>
 
 <style scoped>
-.main-principle {
-  margin-bottom: 3rem;
+.info-intro p {
+  margin: 0 0 1.5rem;
+  color: var(--muted);
 }
 
-.principle-card {
-  display: flex;
-  gap: 1.5rem;
-  padding: 2rem;
-  background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-bg) 100%);
-  border: 2px solid var(--color-primary);
-  border-radius: var(--radius-lg);
+.main-principle,
+.cost-section,
+.aids-section,
+.example-section,
+.why-section {
+  margin-bottom: 2.25rem;
 }
 
-.principle-icon {
-  color: var(--color-primary);
-  flex-shrink: 0;
-  display: flex;
-  align-items: flex-start;
-  min-height: 48px;
-  overflow: visible;
+h4 {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--rule);
 }
 
-.principle-content h2 {
+h5 {
+  font-size: 1.1875rem;
+  margin-bottom: 0.5rem;
+}
+
+p {
   margin: 0 0 1rem;
-  color: var(--color-primary-dark);
 }
 
-.principle-content p {
-  margin: 0 0 1rem;
-  color: var(--color-text);
-  line-height: 1.6;
+.principle-card,
+.why-card {
+  border-left: 3px solid var(--ink);
+  padding: 0.25rem 0 0.25rem 1rem;
 }
 
-.principle-content p:last-child {
+.principle-content p:last-child,
+.why-content p:last-child,
+.cost-content p:last-child {
   margin-bottom: 0;
 }
 
-@media (max-width: 640px) {
-  .principle-card {
-    flex-direction: column;
-    text-align: center;
-  }
-}
-
-.cost-section {
-  margin-bottom: 3rem;
-}
-
-.cost-section h2 {
-  margin-bottom: 1.5rem;
-}
-
-.cost-grid {
+.cost-grid,
+.aids-grid {
   display: grid;
-  gap: 1.5rem;
+  gap: 0 2rem;
 }
 
 @media (min-width: 768px) {
-  .cost-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
+  .cost-grid { grid-template-columns: repeat(3, 1fr); }
+  .aids-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
-.cost-card {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
+.cost-card,
+.aid-card {
+  border-top: 1px solid var(--ink);
+  padding: 0.75rem 0 1.25rem;
 }
 
 .cost-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 1.25rem;
-  background: var(--color-bg-alt);
-  border-bottom: 1px solid var(--color-border);
+  flex-direction: column;
+  margin-bottom: 0.5rem;
 }
 
 .cost-label {
-  font-weight: 600;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 1.1875rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .cost-amount {
   font-weight: 700;
-  color: var(--color-primary);
-}
-
-.cost-content {
-  padding: 1.25rem;
-}
-
-.cost-content p {
-  margin: 0 0 1rem;
-  color: var(--color-text-light);
-  font-size: 0.95rem;
-  line-height: 1.6;
 }
 
 .cost-highlight {
-  background: var(--color-primary-light);
-  padding: 1rem;
-  border-radius: var(--radius);
-  font-size: 0.9rem;
-  color: var(--color-primary-dark);
-}
-
-.aids-section {
-  margin-bottom: 3rem;
-}
-
-.aids-section h2 {
-  margin-bottom: 1.5rem;
-}
-
-.aids-grid {
-  display: grid;
-  gap: 1.5rem;
-}
-
-@media (min-width: 768px) {
-  .aids-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-.aid-card {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-}
-
-.aid-card.featured {
-  border-color: var(--color-primary);
+  border-left: 3px solid var(--signal);
+  padding-left: 0.75rem;
 }
 
 .aid-badge {
   display: inline-block;
-  background: var(--color-primary);
-  color: white;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.25rem 0.75rem;
-  border-radius: 999px;
-  margin-bottom: 0.75rem;
-}
-
-.aid-badge.secondary {
-  background: var(--color-secondary);
-}
-
-.aid-card h3 {
-  margin: 0 0 0.75rem;
-}
-
-.aid-card p {
-  margin: 0 0 1rem;
-  color: var(--color-text-light);
-  font-size: 0.95rem;
-  line-height: 1.6;
+  margin-bottom: 0.5rem;
+  padding: 0 0.45rem;
+  border: 1px solid var(--ink);
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 0.9375rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .aid-card ul {
   margin: 0;
   padding-left: 1.25rem;
-  color: var(--color-text-muted);
-  font-size: 0.875rem;
+  color: var(--muted);
 }
 
 .aid-card li {
   margin-bottom: 0.25rem;
 }
 
-.example-section {
-  margin-bottom: 3rem;
-}
-
-.example-section h2 {
-  margin-bottom: 1rem;
-}
-
-.example-card {
-  background: var(--color-bg-alt);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-}
-
 .example-intro {
-  margin-bottom: 1rem;
-  color: var(--color-text);
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .example-table {
-  background: var(--color-bg-card);
-  border-radius: var(--radius);
-  overflow: hidden;
-  margin-bottom: 1rem;
+  border-top: 2px solid var(--ink);
+  margin-bottom: 0.75rem;
 }
 
 .example-row {
   display: flex;
   justify-content: space-between;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--color-border);
-  font-size: 0.95rem;
-}
-
-.example-row:last-child {
-  border-bottom: none;
-}
-
-.example-row.aid {
-  color: var(--color-success);
-}
-
-.example-row.total {
-  background: var(--color-primary);
-  color: white;
-  font-weight: 600;
+  gap: 1rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--rule);
 }
 
 .example-row .amount {
-  font-weight: 600;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.example-row.aid span:first-child {
+  font-style: italic;
 }
 
 .example-note {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
+  font-size: 0.9375rem;
+  color: var(--muted);
   font-style: italic;
   margin: 0;
 }
 
-.why-section {
-  margin-bottom: 2rem;
-}
-
-.why-section h2 {
-  margin-bottom: 1rem;
-}
-
-.why-card {
-  display: flex;
-  gap: 1rem;
-  padding: 1.5rem;
-  background: var(--color-bg-alt);
-  border-left: 4px solid var(--color-warning);
-  border-radius: 0 var(--radius) var(--radius) 0;
-}
-
-.why-icon {
-  color: var(--color-warning);
-  flex-shrink: 0;
-  display: flex;
-  align-items: flex-start;
-}
-
-.why-content p {
-  margin: 0 0 0.75rem;
-  color: var(--color-text);
-  line-height: 1.6;
-}
-
-.why-content p:last-child {
-  margin-bottom: 0;
-  color: var(--color-text-light);
-}
-
 .sources-section {
-  margin-top: 3rem;
-  padding-top: 2rem;
-  border-top: 1px solid var(--color-border);
-}
-
-.sources-section h3 {
-  font-size: 1rem;
-  margin-bottom: 1rem;
-  color: var(--color-text-muted);
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
 }
 
 .sources-list {
@@ -543,50 +376,12 @@ import SvgIcon from '../components/SvgIcon.vue'
 }
 
 .sources-list li {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  font-size: 0.9rem;
-}
-
-.source-favicon {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  border-radius: 3px;
-}
-
-.source-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-primary);
-}
-
-.source-icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-.enedis-logo {
-  color: var(--color-enedis, #0066b3);
+  margin-bottom: 0.6rem;
 }
 
 .source-desc {
-  width: 100%;
-  margin-left: 28px;
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-}
-
-.sources-list a {
-  color: var(--color-primary);
-  text-decoration: none;
-}
-
-.sources-list a:hover {
-  text-decoration: underline;
+  display: block;
+  font-size: 1rem;
+  color: var(--muted);
 }
 </style>
