@@ -195,6 +195,8 @@ CORS_ORIGIN=http://localhost:5173
 | `INSTANCE_DIR` | Non | Dossier de l'instance (voir ci-dessous) |
 | `TRUST_PROXY` | Non | Nombre de proxys devant l'application (défaut 1, Nginx) : l'IP utilisée par les limites en dépend |
 | `RATE_ANSWERS_PER_HOUR` / `RATE_ANSWERS_PER_DAY` | Non | Plafonds par IP des nouvelles réponses sans code de place (défaut 30 / 100) ; larges car les opérateurs mobiles partagent les IP |
+| `CAMPAIGN_KEY_REQUIRED` | Non | `1` : une réponse en ligne doit porter un code imprimé (clé de campagne de la note / du flyer / de l'affiche, ou code de place du papillon). Défaut : facultatif |
+| `RATE_KEYED_ANSWERS_PER_HOUR` | Non | Plafond par IP des réponses portant la clé de campagne (défaut 200) ; aucune limite par IP avec un code de place valide |
 | `RATE_API_PER_MINUTE` / `RATE_EDITS_PER_HOUR` | Non | Plafonds par IP des appels API (défaut 600) et des modifications par jeton (défaut 60) |
 | `PARKING_CONFIG` | Non | Fichier JSON décrivant la copro physique (entrées, escaliers, lots/places) |
 | `PARKING_SPOTS` | Non | Nombre de places (numérotées 1..N) si pas d'instance |

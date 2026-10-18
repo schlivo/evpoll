@@ -9,6 +9,7 @@ import {
   computeSummary, computePublicStats, loadResponses, resolveLots, regenerateCodes, codesStatus
 } from '../lots.js';
 import { surveyValidation, toRow, insertAnswer } from './survey.js';
+import { getCampaignKey, rotateCampaignKey, CAMPAIGN_KEY_REQUIRED } from '../campaign.js';
 import { validationResult } from 'express-validator';
 
 const router = Router();
@@ -155,7 +156,8 @@ export function handleExportCSV(req, res) {
         express,
         source,
         verification,
-        review_status
+        review_status,
+        campaign_key
       FROM responses
       ORDER BY created_at DESC
     `);
@@ -186,7 +188,8 @@ export function handleExportCSV(req, res) {
       'Réponse express',
       'Source',
       'Vérification',
-      'Revue'
+      'Revue',
+      'Via document de campagne'
     ];
 
     // Convert to CSV
@@ -230,7 +233,8 @@ export function handleExportCSV(req, res) {
         r.express ? 'Oui' : 'Non',
         r.source || 'web',
         r.verification || 'declarative',
-        r.review_status || 'ok'
+        r.review_status || 'ok',
+        r.campaign_key ? 'Oui' : 'Non'
       ].join(','))
     ];
 
@@ -470,6 +474,19 @@ router.post('/admin/paper', requireAuth, (req, res, next) => {
     console.error('Paper entry error:', error);
     res.status(500).json({ success: false, error: 'Erreur lors de l\'enregistrement' });
   }
+});
+
+// GET /api/stats/admin/campaign-key - Key printed on the generic documents (A4 note, A5, poster)
+router.get('/admin/campaign-key', requireAuth, (req, res) => {
+  logAuditEvent('campaign_key_view', getClientIP(req), {});
+  res.json({ success: true, campaign_key: getCampaignKey(), required: CAMPAIGN_KEY_REQUIRED });
+});
+
+// POST /api/stats/admin/campaign-key/rotate - New key: documents printed with the old one stop working
+router.post('/admin/campaign-key/rotate', requireAuth, (req, res) => {
+  const key = rotateCampaignKey();
+  logAuditEvent('campaign_key_rotate', getClientIP(req), {});
+  res.json({ success: true, campaign_key: key, required: CAMPAIGN_KEY_REQUIRED });
 });
 
 // GET /api/stats/admin/codes/status - Windshield codes status (never the codes themselves)

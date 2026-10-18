@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { body, validationResult } from 'express-validator';
 import crypto from 'crypto';
 import db, { logAuditEvent, hashIp, signValue } from '../db.js';
-import { surveyLimiter, surveyDailyLimiter, editLimiter } from '../middleware/rateLimiter.js';
+import { surveyLimiter, surveyDailyLimiter, editLimiter, keyedAnswerLimiter } from '../middleware/rateLimiter.js';
+import { CAMPAIGN_KEY_REQUIRED, verifyCampaignKey } from '../campaign.js';
 import { getClientIP } from '../middleware/auth.js';
 import { BUILDING_IDS } from '../config.js';
 import { normalizeParkingSpots } from '../parking.js';
@@ -112,6 +113,9 @@ export const surveyValidation = [
   body('consent_contact')
     .optional()
     .isBoolean().withMessage('Consentement invalide'),
+  body('campaign_key')
+    .optional({ values: 'falsy' })
+    .isString().isLength({ max: 20 }).withMessage('Code invalide'),
   body('code')
     .optional({ values: 'falsy' })
     .isString().isLength({ max: 20 }).withMessage('Code invalide')
@@ -161,7 +165,7 @@ function checkCode(lots, code) {
  * @param {Object} options - { source, verification, express, ipHash, userAgent }
  * @returns {{ id: number, conflict: boolean, editToken: string, createdAt: string }}
  */
-export function insertAnswer(row, { source = 'web', verification = 'declarative', express = 0, ipHash = null, userAgent = null }) {
+export function insertAnswer(row, { source = 'web', verification = 'declarative', express = 0, ipHash = null, userAgent = null, campaignKey = false }) {
   const lots = lotsForParkingSpot(row.parking_spot);
   const editToken = crypto.randomBytes(16).toString('hex');
 
@@ -177,13 +181,13 @@ export function insertAnswer(row, { source = 'web', verification = 'declarative'
         interested, preferred_solution, timeline, comments,
         email, consent_contact, ip_address, user_agent,
         submission_hash, consent_timestamp, express, edit_token_hash,
-        review_status, source, verification, ip_hash
+        review_status, source, verification, ip_hash, campaign_key
       ) VALUES (
         @building, @apartment, @parking_spot, @no_parking, @status, @has_ev,
         @interested, @preferred_solution, @timeline, @comments,
         @email, @consent_contact, NULL, @user_agent,
         @submission_hash, @consent_timestamp, @express, @edit_token_hash,
-        @review_status, @source, @verification, @ip_hash
+        @review_status, @source, @verification, @ip_hash, @campaign_key
       )
     `).run({
       ...row,
@@ -195,7 +199,8 @@ export function insertAnswer(row, { source = 'web', verification = 'declarative'
       review_status: others.length ? 'conflit' : 'ok',
       source,
       verification,
-      ip_hash: ipHash
+      ip_hash: ipHash,
+      campaign_key: campaignKey ? 1 : 0
     });
     const { created_at: createdAt } = db.prepare('SELECT created_at FROM responses WHERE id = ?').get(result.lastInsertRowid);
     return { id: Number(result.lastInsertRowid), conflict, editToken, createdAt };
@@ -272,8 +277,40 @@ function hasValidPlaceCode(req) {
   return lots.length === 1 && verifyCode(lots[0].key, req.body.code);
 }
 
-const unlessPlaceCode = (limiter) => (req, res, next) =>
-  (hasValidPlaceCode(req) ? next() : limiter(req, res, next));
+/**
+ * Which printed code the answer carries. One "code" field accepts either the place code
+ * of a windshield flyer or the campaign key of the generic documents; the campaign key
+ * may also come from the QR code / short URL (campaign_key).
+ * @returns {{ placeCode: boolean, campaignKey: boolean }}
+ */
+function classifyCodes(req) {
+  if (req.codeClass) return req.codeClass;
+  const placeCode = hasValidPlaceCode(req);
+  const campaignKey = verifyCampaignKey(req.body?.campaign_key) || (!placeCode && verifyCampaignKey(req.body?.code));
+  req.codeClass = { placeCode, campaignKey };
+  return req.codeClass;
+}
+
+// Place code: no per-IP limit (bounded by the number of lots); campaign key: wide limit;
+// neither: the normal hourly and daily limits
+const answerLimits = (req, res, next) => {
+  const { placeCode, campaignKey } = classifyCodes(req);
+  if (placeCode) return next();
+  if (campaignKey) return keyedAnswerLimiter(req, res, next);
+  return surveyLimiter(req, res, () => surveyDailyLimiter(req, res, next));
+};
+
+// With CAMPAIGN_KEY_REQUIRED, an answer must carry one of the printed codes
+const requireCode = (req, res, next) => {
+  const { placeCode, campaignKey } = classifyCodes(req);
+  if (!CAMPAIGN_KEY_REQUIRED || placeCode || campaignKey) return next();
+  logAuditEvent('code_required', getClientIP(req), {});
+  return res.status(400).json({
+    success: false,
+    error: 'code_required',
+    message: 'Indiquez le code imprimé sous le QR code du document reçu (note, flyer ou papillon), ou demandez-le au conseil syndical.'
+  });
+};
 
 function antiRobot(req, res, next) {
   const clientIP = getClientIP(req);
@@ -326,7 +363,7 @@ function findEditable(id, editToken) {
 }
 
 // POST /api/survey - Submit a survey response (full form or express)
-router.post('/', unlessPlaceCode(surveyLimiter), unlessPlaceCode(surveyDailyLimiter), antiRobot, surveyValidation, (req, res) => {
+router.post('/', answerLimits, antiRobot, requireCode, surveyValidation, (req, res) => {
   if (sendValidationErrors(req, res)) return;
 
   const express = req.body.express ? 1 : 0;
@@ -348,7 +385,9 @@ router.post('/', unlessPlaceCode(surveyLimiter), unlessPlaceCode(surveyDailyLimi
     }
 
     const lots = lotsForParkingSpot(row.parking_spot);
-    const codeCheck = checkCode(lots, req.body.code);
+    const { campaignKey } = classifyCodes(req);
+    // The "code" field may hold the campaign key rather than a place code
+    const codeCheck = campaignKey && verifyCampaignKey(req.body.code) ? null : checkCode(lots, req.body.code);
     if (codeCheck === 'declarative') {
       logAuditEvent('code_mismatch', clientIP, { lots: lots.map(l => l.key) });
     }
@@ -359,7 +398,8 @@ router.post('/', unlessPlaceCode(surveyLimiter), unlessPlaceCode(surveyDailyLimi
       verification,
       express,
       ipHash,
-      userAgent: req.headers['user-agent'] || 'unknown'
+      userAgent: req.headers['user-agent'] || 'unknown',
+      campaignKey: classifyCodes(req).campaignKey
     });
 
     logAuditEvent('submission', clientIP, {

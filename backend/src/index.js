@@ -8,6 +8,7 @@ import { dirname, join } from 'path';
 import surveyRouter from './routes/survey.js';
 import statsRouter, { handleExportCSV } from './routes/stats.js';
 import { globalLimiter } from './middleware/rateLimiter.js';
+import { CAMPAIGN_KEY_REQUIRED, normalizeKey } from './campaign.js';
 import { COPRO, BUILDINGS, BUILDINGS_QUESTION, PARKING_SPOTS, LOTS, CAMPAIGN, PRIVACY, TEXTS, loadParkingPlan } from './config.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -98,7 +99,9 @@ app.get('/api/config', (req, res) => {
     texts: TEXTS,
     // Campaign defaults for the flyer generator (editable there)
     campaign_deadline: CAMPAIGN.deadline,
-    campaign_signature: CAMPAIGN.signature
+    campaign_signature: CAMPAIGN.signature,
+    // The survey then asks for the code printed on the documents
+    campaign_key_required: CAMPAIGN_KEY_REQUIRED
   });
 });
 
@@ -115,6 +118,11 @@ const publicPath = join(__dirname, '../public');
 app.use(express.static(publicPath));
 
 // Flyer generator route - redirect to static file
+// Short link printed on the campaign documents: /r/K7M4QX opens the express answer with the key
+app.get('/r/:key', (req, res) => {
+  res.redirect(`/?express=1&k=${encodeURIComponent(normalizeKey(req.params.key))}`);
+});
+
 app.get('/flyer', (req, res) => {
   res.redirect('/flyer.html');
 });

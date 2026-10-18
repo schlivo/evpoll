@@ -79,6 +79,7 @@ addColumnIfNotExists('responses', 'review_status', "TEXT DEFAULT 'ok'"); // ok |
 addColumnIfNotExists('responses', 'source', "TEXT DEFAULT 'web'"); // web | papier
 addColumnIfNotExists('responses', 'verification', "TEXT DEFAULT 'declarative'"); // verifiee | declarative
 addColumnIfNotExists('responses', 'ip_hash', 'TEXT'); // keyed hash, purged after PRIVACY.ip_hash_retention_days
+addColumnIfNotExists('responses', 'campaign_key', 'INTEGER DEFAULT 0'); // answered with the campaign key (QR / short URL / typed)
 
 // One windshield code per parking lot, stored hashed only
 db.exec(`

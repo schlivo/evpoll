@@ -102,14 +102,21 @@ const onPopState = () => {
   if (isEnqueteOpen.value && !history.state?.irveEnquete) hideEnquete()
 }
 
+// Spot / place code / campaign key from a QR code, handed to the survey before the URL is cleaned
+const entryParams = ref({})
+provide('entryParams', entryParams)
+
 /** Flyer QR codes link to /?express=1 (or /enquete?express=1): open the survey directly. */
 const openEnqueteFromUrl = () => {
   const params = new URLSearchParams(location.search)
   if (params.get('express') !== '1' && location.pathname !== '/enquete') return
+  entryParams.value = { p: params.get('p'), c: params.get('c'), k: params.get('k') }
   showEnquete('express')
   // Drop the query so closing the survey doesn't reopen it on reload
   // (after the router's initial navigation, which would otherwise restore it)
   params.delete('express')
+  // Codes from the QR code are read by the survey: keep them out of the address bar
+  for (const key of ['p', 'c', 'k']) params.delete(key)
   const hash = location.hash
   router.isReady().then(() => router.replace({ path: '/', query: Object.fromEntries(params), hash }))
 }

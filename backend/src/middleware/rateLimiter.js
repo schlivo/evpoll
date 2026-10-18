@@ -45,6 +45,19 @@ export const surveyDailyLimiter = rateLimit({
   legacyHeaders: false
 });
 
+// New answers carrying the campaign key of the printed documents: much wider quota
+// (a whole building may scan the hall poster from the same carrier IP)
+export const keyedAnswerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: envInt('RATE_KEYED_ANSWERS_PER_HOUR', 200),
+  message: {
+    success: false,
+    error: 'Vous avez atteint la limite de soumissions. Veuillez réessayer plus tard.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 // Reading / editing one's own answer with the edit token: separate quota so that
 // "Modifier ma réponse" does not use up the submission limit (the token itself is unguessable)
 export const editLimiter = rateLimit({

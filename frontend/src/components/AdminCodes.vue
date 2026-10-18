@@ -10,6 +10,11 @@ const emit = defineEmits(['unauthorized'])
 
 // Read by the flyer generator (flyer.html?doc=a6)
 const A6_STORAGE_KEY = 'evpoll_a6_codes'
+// Campaign key for the generic documents, read by the flyer generator too
+const CAMPAIGN_KEY_STORAGE = 'evpoll_campaign_key'
+
+const campaign = ref(null)
+const confirmingRotate = ref(false)
 
 const status = ref(null)
 const codes = ref(null)
@@ -31,6 +36,44 @@ const loadStatus = async () => {
   } catch (err) {
     status.value = null
   }
+}
+
+/** Campaign key printed on the A4 note, A5 flyer and poster (derived server-side, can be shown again) */
+const loadCampaignKey = async () => {
+  try {
+    const response = await authFetch('/api/stats/admin/campaign-key')
+    if (response.status === 401) return emit('unauthorized')
+    if (response.ok) campaign.value = await response.json()
+  } catch (err) {
+    campaign.value = null
+  }
+}
+
+const rotateCampaignKey = async () => {
+  busy.value = true
+  error.value = ''
+  try {
+    const response = await authFetch('/api/stats/admin/campaign-key/rotate', { method: 'POST' })
+    if (response.status === 401) return emit('unauthorized')
+    if (!response.ok) throw new Error('Changement impossible')
+    campaign.value = await response.json()
+    confirmingRotate.value = false
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    busy.value = false
+  }
+}
+
+const openDocuments = (doc) => {
+  try {
+    if (campaign.value?.campaign_key) sessionStorage.setItem(CAMPAIGN_KEY_STORAGE, campaign.value.campaign_key)
+    if (codes.value) sessionStorage.setItem(A6_STORAGE_KEY, JSON.stringify(codes.value))
+  } catch (err) {
+    error.value = 'Le navigateur refuse le stockage de session.'
+    return
+  }
+  window.open(`/flyer.html?doc=${doc}`, '_blank')
 }
 
 /** Regenerate every code: invalidates the flyers already printed */
@@ -66,20 +109,37 @@ const downloadCSV = () => {
   URL.revokeObjectURL(url)
 }
 
-const openGenerator = () => {
-  try {
-    sessionStorage.setItem(A6_STORAGE_KEY, JSON.stringify(codes.value))
-  } catch (err) {
-    error.value = 'Le navigateur refuse le stockage de session : utilisez le CSV.'
-    return
-  }
-  window.open('/flyer.html?doc=a6', '_blank')
-}
+const openGenerator = () => openDocuments('a6')
 
-onMounted(loadStatus)
+onMounted(() => {
+  loadStatus()
+  loadCampaignKey()
+})
 </script>
 
 <template>
+  <section class="admin-section">
+    <h3>Clé de campagne</h3>
+    <p class="hint">
+      Imprimée sous le QR code de la note A4, du flyer A5 et de l'affiche (lien court <code>/r/CLÉ</code>).
+      Une réponse avec la clé confirme qu'elle vient d'un document de la résidence ; la limite par adresse IP est alors élargie.
+      <template v-if="campaign?.required">Elle est <strong>obligatoire</strong> pour répondre (CAMPAIGN_KEY_REQUIRED).</template>
+      <template v-else>Elle reste facultative (CAMPAIGN_KEY_REQUIRED non activé).</template>
+    </p>
+    <p v-if="campaign" class="campaign-key">{{ campaign.campaign_key }}</p>
+    <div class="row">
+      <button class="btn btn-primary" :disabled="!campaign" @click="openDocuments('note')">Ouvrir le générateur (note, flyer, affiche)</button>
+      <button v-if="!confirmingRotate" class="btn btn-secondary" :disabled="busy" @click="confirmingRotate = true">Changer la clé</button>
+    </div>
+    <div v-if="confirmingRotate" class="confirm">
+      <strong>Les documents déjà imprimés avec l'ancienne clé ne la feront plus reconnaître.</strong>
+      <div class="row">
+        <button class="btn btn-primary" :disabled="busy" @click="rotateCampaignKey">Confirmer</button>
+        <button class="btn btn-secondary" :disabled="busy" @click="confirmingRotate = false">Annuler</button>
+      </div>
+    </div>
+  </section>
+
   <section class="admin-section">
     <h3>Papillons pare-brise</h3>
     <p class="hint">
@@ -134,4 +194,5 @@ onMounted(loadStatus)
 .form-error { color: var(--color-danger); }
 .codes-ready { margin-top: 1rem; padding: 1rem; border: 2px solid var(--color-danger); border-radius: var(--radius); }
 .once { margin: 0 0 0.75rem; }
+.campaign-key { font-family: var(--font-title); font-size: 2rem; letter-spacing: 0.2em; margin: 0 0 1rem; }
 </style>

@@ -41,20 +41,30 @@ const places = computed(() => {
   })
 })
 
-const shapes = computed(() => places.value.map(({ spot, points }) => {
-  const xs = points.map(p => p[0])
-  const ys = points.map(p => p[1])
-  const w = Math.max(...xs) - Math.min(...xs)
-  const h = Math.max(...ys) - Math.min(...ys)
-  return {
-    spot,
-    d: 'M' + points.map(p => p.join(',')).join('L') + 'Z',
-    cx: xs.reduce((a, b) => a + b, 0) / xs.length,
-    cy: ys.reduce((a, b) => a + b, 0) / ys.length,
-    box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
-    fontSize: Math.max(10, Math.min(w, h) * 0.32)
-  }
+// Shortest side of a polygon (a rotated spot keeps its real width, unlike its bounding box)
+const minSide = (points) => Math.min(...points.map((p, i) => {
+  const q = points[(i + 1) % points.length]
+  return Math.hypot(q[0] - p[0], q[1] - p[1])
 }))
+
+const shapes = computed(() => {
+  const list = places.value.map(({ spot, points }) => {
+    const xs = points.map(p => p[0])
+    const ys = points.map(p => p[1])
+    return {
+      spot,
+      d: 'M' + points.map(p => p.join(',')).join('L') + 'Z',
+      cx: xs.reduce((a, b) => a + b, 0) / xs.length,
+      cy: ys.reduce((a, b) => a + b, 0) / ys.length,
+      box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
+      side: minSide(points)
+    }
+  })
+  // One label size for the whole plan (from the median spot), smaller only where a spot is too narrow
+  const sides = list.map(s => s.side).sort((a, b) => a - b)
+  const base = (sides[Math.floor(sides.length / 2)] || 40) * 0.32
+  return list.map(s => ({ ...s, fontSize: Math.max(8, Math.min(base, s.side * 0.45)) }))
+})
 
 /** Convex hull (monotone chain) of a point list */
 const hull = (points) => {

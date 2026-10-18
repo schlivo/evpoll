@@ -8,6 +8,7 @@ const closeEnquete = inject('closeEnquete')
 const openPrivacy = inject('openPrivacy', () => {})
 // 'express' (one screen) or 'full' (4 steps), chosen by App.vue
 const enqueteMode = inject('enqueteMode', ref('express'))
+const entryParams = inject('entryParams', ref({}))
 
 const openPrivacyPolicy = () => {
   openPrivacy()
@@ -47,6 +48,13 @@ const fetchFormToken = async () => {
 }
 // Place code printed on the windshield flyer (?p=83&c=K7M4QX)
 const placeCode = ref('')
+// Campaign key of the generic documents (QR code / short URL /r/KEY -> ?k=KEY)
+const campaignKey = ref('')
+// Code typed by people who arrived without a QR code (place code or campaign key)
+const typedCode = ref('')
+const codeRequired = ref(false)
+const CAMPAIGN_KEY_STORAGE = 'evpoll_campaign_key_in'
+const hasPrintedCode = computed(() => !!(placeCode.value || campaignKey.value))
 
 const plan = ref(null)
 const lots = ref([])
@@ -197,14 +205,25 @@ onMounted(async () => {
   checkExistingSubmission()
 
   // Windshield flyer QR code: ?p=83&c=K7M4QX prefills the spot and carries the place code
+  // (App.vue passes them along, as it cleans the address bar when opening the survey)
   const params = new URLSearchParams(location.search)
+  for (const [key, value] of Object.entries(entryParams.value || {})) {
+    if (value && !params.has(key)) params.set(key, value)
+  }
   if (params.get('p') && !hasExistingSubmission.value) {
     formData.value.parking_spot = params.get('p').replace(/-/g, ', ')
   }
   if (params.get('c')) placeCode.value = params.get('c').toUpperCase().slice(0, 12)
-  if (params.has('p') || params.has('c')) {
+  try {
+    if (params.get('k')) sessionStorage.setItem(CAMPAIGN_KEY_STORAGE, params.get('k').toUpperCase().slice(0, 12))
+    campaignKey.value = sessionStorage.getItem(CAMPAIGN_KEY_STORAGE) || ''
+  } catch (e) {
+    campaignKey.value = (params.get('k') || '').toUpperCase().slice(0, 12)
+  }
+  if (params.has('p') || params.has('c') || params.has('k')) {
     params.delete('p')
     params.delete('c')
+    params.delete('k')
     const query = params.toString()
     history.replaceState(history.state, '', location.pathname + (query ? '?' + query : '') + location.hash)
   }
@@ -226,6 +245,7 @@ onMounted(async () => {
       multiSpotLots.value = config.multi_spot_lots || []
       lots.value = config.lots || config.multi_spot_lots || []
       privacy.value = config.privacy || {}
+      codeRequired.value = !!config.campaign_key_required
       // Empty when the instance has no real address configured: then nothing is shown
       contactEmail.value = config.contact_email === 'conseil-syndical@exemple.fr' ? '' : (config.contact_email || '')
       syndicEmail.value = config.syndic_email === 'syndic@exemple.fr' ? '' : (config.syndic_email || '')
@@ -319,7 +339,8 @@ watch(() => formData.value.parking_spot, () => { showFullPlan.value = false })
 
 const expressComplete = computed(() =>
   (formData.value.no_parking || (typedSpots.value.length && !parkingSpotError(formData.value.parking_spot, parkingSpots.value))) &&
-  !!formData.value.has_ev && !!formData.value.interested
+  !!formData.value.has_ev && !!formData.value.interested &&
+  (!codeRequired.value || hasPrintedCode.value || typedCode.value.trim().length >= 6)
 )
 
 const retentionText = computed(() => {
@@ -401,7 +422,8 @@ const sendAnswers = async (express) => {
     website: honeypot.value,
     form_token: formToken.value,
     form_elapsed_ms: Date.now() - formShownAt.value,
-    code: placeCode.value || undefined
+    code: placeCode.value || typedCode.value.trim() || undefined,
+    campaign_key: campaignKey.value || undefined
   }
   const payload = completing
     ? { ...formData.value, express: express || undefined, edit_token: editContext.value.token }
@@ -428,6 +450,8 @@ const sendAnswers = async (express) => {
       lastSubmitWasExpress.value = express
       isEditing.value = false
       isSubmitted.value = true
+    } else if (data.error === 'code_required') {
+      submitError.value = data.message
     } else if (data.error === 'form_token') {
       // Expired (page left open for hours) or already used: get a new one, the person can resend
       await fetchFormToken()
@@ -699,6 +723,25 @@ const switchToFull = () => {
           </div>
           <span v-if="errors.interested" class="form-error">{{ errors.interested }}</span>
         </fieldset>
+
+        <!-- People arriving without a QR code: the code printed under it on their document -->
+        <div v-if="!hasPrintedCode && !isEditing" class="form-group">
+          <label class="form-label" for="printed_code">
+            Code imprimé sous le QR code de votre document{{ codeRequired ? '' : ' (facultatif)' }}
+          </label>
+          <input
+            id="printed_code"
+            v-model="typedCode"
+            type="text"
+            class="form-input code-input"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            maxlength="12"
+            placeholder="Ex. K7M4QX"
+          />
+          <p class="form-hint">Sur la note, le flyer ou le papillon de pare-brise. Il confirme que la réponse vient de la résidence.</p>
+        </div>
 
         <!-- Honeypot: hidden from people and assistive tech, bots fill it -->
         <div class="hp" aria-hidden="true">
@@ -1549,6 +1592,14 @@ const switchToFull = () => {
 
 .lot-prompt p {
   margin: 0 0 0.6rem;
+}
+
+.code-input {
+  font-family: var(--font-title);
+  font-size: 1.4rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  max-width: 14rem;
 }
 
 .hp {
