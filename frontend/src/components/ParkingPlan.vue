@@ -27,6 +27,13 @@ const statusBySpot = computed(() => {
     // Most favourable answer wins when several responses claim the same spot
     result[spot] = ['oui', 'peut-etre', 'non'].find(o => responses.some(r => r.interested === o)) || 'non'
   }
+  // One answer per lot: the other places of a double lot take the answer given for one of them
+  for (const { places } of props.lots) {
+    const answered = places.filter(p => result[p])
+    if (!answered.length || answered.length === places.length) continue
+    const status = ['oui', 'peut-etre', 'non'].find(o => answered.some(p => result[p] === o))
+    for (const p of places) if (!result[p]) result[p] = status
+  }
   return result
 })
 

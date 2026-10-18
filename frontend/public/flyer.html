@@ -324,7 +324,7 @@
             flex: none;
             background: var(--asphalt) repeating-linear-gradient(90deg, transparent 0 17mm, #ffffff1c 17mm 17.6mm);
             color: var(--paint);
-            padding: 9mm 10mm 8mm;
+            padding: 8mm 10mm 7mm;
         }
 
         .a5 h1 {
@@ -337,7 +337,7 @@
         .a5 .sub b { color: var(--paint); }
 
         .a5 .body {
-            padding: 6mm 10mm 0;
+            padding: 5mm 10mm 0;
             font-size: 10.5pt;
             line-height: 1.42;
             flex: 1;
@@ -352,7 +352,7 @@
             align-items: center;
             border-top: 1.2pt solid var(--ink);
             border-bottom: 1.2pt solid var(--ink);
-            padding: 5mm 0;
+            padding: 4mm 0;
             margin-top: 2mm;
         }
 
@@ -373,7 +373,7 @@
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 4mm;
-            margin-top: 5mm;
+            margin-top: 4mm;
             font-size: 9pt;
             line-height: 1.3;
         }
@@ -382,15 +382,15 @@
 
         .a5 .paper-box {
             font-size: 9.5pt;
-            margin-top: 4mm;
-            padding: 3mm;
+            margin-top: 3mm;
+            padding: 2.5mm 3mm;
             border: .8pt dashed var(--muted);
         }
 
-        .a5 .note { font-size: 8.5pt; color: var(--muted); margin-top: 4mm; line-height: 1.4; }
+        .a5 .note { font-size: 8.5pt; color: var(--muted); margin: 3mm 0 0; line-height: 1.35; }
 
         .a5 .foot {
-            padding: 4mm 10mm 5mm;
+            padding: 3mm 10mm 5mm;
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
@@ -786,8 +786,7 @@
                     </div>
                     <p class="paper-box"><b>Pas de smartphone ?</b> Écrivez à ${field(s.contact, 'contact')} en indiquant
                     votre n° de place et votre réponse (oui / peut-être / non).</p>
-                    <p class="note">Consultation indicative : seule l'assemblée générale décide. Réponse jamais affichée
-                    individuellement. ${escapeHtml(s.displayUrl)}</p>
+                    <p class="note">Consultation indicative, réponse jamais affichée individuellement · ${escapeHtml(s.displayUrl)}</p>
                 </div>
                 <div class="foot">
                     <div><div class="sig-name">${field(s.signature, 'signature')}</div>${s.address ? `<div class="src">${escapeHtml(s.address)}</div>` : ''}</div>
