@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, inject, onMounted, watch } from 'vue'
+import { ref, computed, inject, onMounted, watch, nextTick } from 'vue'
 import SvgIcon from '../components/SvgIcon.vue'
 import PlanPicker from '../components/PlanPicker.vue'
 import { parkingSpotError } from '../utils/parking.js'
@@ -282,6 +282,27 @@ const selectOnPlan = (spot) => {
   formData.value.parking_spot = String(spot)
   answeredLotPrompts.value = []
 }
+
+// Full plan with the chosen spot still highlighted, to check where it is in the car park
+const showFullPlan = ref(false)
+const planBox = ref(null)
+
+const toggleFullPlan = async () => {
+  showFullPlan.value = !showFullPlan.value
+  if (!showFullPlan.value) return
+  await nextTick()
+  // Scroll the (horizontally scrollable) plan so the chosen spot is centred
+  const box = planBox.value
+  const spotEl = box?.querySelector(`[data-place="${typedSpots.value[0]}"]`)
+  if (box && spotEl) {
+    const b = box.getBoundingClientRect()
+    const r = spotEl.getBoundingClientRect()
+    box.scrollLeft += (r.left + r.width / 2) - (b.left + b.width / 2)
+  }
+}
+
+// Typing another number goes back to the zoomed view
+watch(() => formData.value.parking_spot, () => { showFullPlan.value = false })
 
 const expressComplete = computed(() =>
   (formData.value.no_parking || (typedSpots.value.length && !parkingSpotError(formData.value.parking_spot, parkingSpots.value))) &&
@@ -597,13 +618,13 @@ const switchToFull = () => {
             </div>
           </div>
 
-          <div v-if="!formData.no_parking" class="plan-box" :class="{ mini: typedSpots.length }">
+          <div v-if="!formData.no_parking" ref="planBox" class="plan-box" :class="{ mini: typedSpots.length && !showFullPlan }">
             <PlanPicker
               :plan="plan"
               :parking-spots="parkingSpots || 0"
               :lots="multiSpotLots"
               :selected="typedSpots"
-              :focus-selected="typedSpots.length > 0"
+              :focus-selected="typedSpots.length > 0 && !showFullPlan"
               interactive
               label="Plan du parking : touchez votre place"
               @select="selectOnPlan"
@@ -613,9 +634,10 @@ const switchToFull = () => {
             v-if="typedSpots.length && !formData.no_parking"
             type="button"
             class="link-button"
-            @click="formData.parking_spot = ''"
+            :aria-pressed="showFullPlan"
+            @click="toggleFullPlan"
           >
-            Voir tout le plan
+            {{ showFullPlan ? 'Revenir au zoom sur ma place' : 'Voir ma place sur tout le plan' }}
           </button>
 
           <label class="plain-check">
