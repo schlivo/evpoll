@@ -55,6 +55,13 @@ const typedCode = ref('')
 const codeRequired = ref(false)
 const CAMPAIGN_KEY_STORAGE = 'evpoll_campaign_key_in'
 const hasPrintedCode = computed(() => !!(placeCode.value || campaignKey.value))
+// Spots of the windshield flyer the place code belongs to (?p=83-84)
+const codeSpots = ref([])
+const sameSpots = (a, b) => a.length === b.length && a.every(x => b.includes(x))
+// The place code only verifies the answer for the spots printed on that flyer
+const placeCodeApplies = computed(() =>
+  !!placeCode.value && !formData.value.no_parking && sameSpots(typedSpots.value, codeSpots.value)
+)
 
 const plan = ref(null)
 const lots = ref([])
@@ -209,6 +216,9 @@ onMounted(async () => {
   const params = new URLSearchParams(location.search)
   for (const [key, value] of Object.entries(entryParams.value || {})) {
     if (value && !params.has(key)) params.set(key, value)
+  }
+  if (params.get('p')) {
+    codeSpots.value = params.get('p').split(/[-,\s]+/).map(Number).filter(Boolean)
   }
   if (params.get('p') && !hasExistingSubmission.value) {
     formData.value.parking_spot = params.get('p').replace(/-/g, ', ')
@@ -571,6 +581,9 @@ const switchToFull = () => {
           <template v-if="typedSpots.length">Votre réponse pour la place {{ typedSpots.join('-') }} est enregistrée.</template>
           <template v-else>Votre réponse est enregistrée.</template>
         </h2>
+        <p v-if="submitResult?.verification === 'verifiee'" class="verified-line">
+          ✓ Réponse vérifiée par le code du papillon
+        </p>
         <p v-if="submitResult?.conflict" class="state-note">
           Une autre réponse existe déjà pour ce lot : le conseil syndical vérifiera.
         </p>
@@ -653,6 +666,15 @@ const switchToFull = () => {
             <template v-if="spotDescription.lot"> · <strong>lot n°{{ spotDescription.lot }}</strong> · {{ spotDescription.type }}</template>
           </p>
           <p v-else id="spot-help" class="form-hint">Touchez votre place sur le plan ou tapez son numéro. Plusieurs places : séparez-les par une virgule.</p>
+          <!-- Where the answer comes from (validated by the server only when sending) -->
+          <p v-if="placeCode && placeCodeApplies" class="origin-line">
+            Lien du papillon de la place {{ codeSpots.join('-') }}
+          </p>
+          <p v-else-if="placeCode && codeSpots.length" class="origin-line warn">
+            Le code de votre papillon vaut pour la place {{ codeSpots.join('-') }} : pour une autre place,
+            la réponse sera simplement déclarative.
+          </p>
+          <p v-else-if="campaignKey" class="origin-line">Lien d'un document de la résidence</p>
 
           <div v-if="lotPrompt" class="lot-prompt">
             <p>
@@ -1592,6 +1614,22 @@ const switchToFull = () => {
 
 .lot-prompt p {
   margin: 0 0 0.6rem;
+}
+
+.origin-line {
+  font-size: 0.95rem;
+  margin: 0.4rem 0 0;
+  padding-left: 0.6rem;
+  border-left: 3px solid var(--ink);
+}
+
+.origin-line.warn {
+  border-left-color: var(--rose);
+}
+
+.verified-line {
+  font-weight: 700;
+  margin: 0 0 0.75rem;
 }
 
 .code-input {
