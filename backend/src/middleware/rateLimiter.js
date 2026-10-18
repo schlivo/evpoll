@@ -72,6 +72,20 @@ export const editLimiter = rateLimit({
 });
 
 // Auth endpoint limit: 5 attempts per 15 minutes per IP (brute force protection)
+// Parking plan behind a printed code: wrong codes per IP (stops guessing the key there)
+export const planAccessLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,
+  message: {
+    success: false,
+    error: 'Trop de codes erronés. Veuillez réessayer dans 15 minutes.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => !req.get('X-Access-Code'),
+  skipSuccessfulRequests: true
+});
+
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5,

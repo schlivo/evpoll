@@ -196,6 +196,7 @@ CORS_ORIGIN=http://localhost:5173
 | `TRUST_PROXY` | Non | Nombre de proxys devant l'application (défaut 1, Nginx) : l'IP utilisée par les limites en dépend |
 | `RATE_ANSWERS_PER_HOUR` / `RATE_ANSWERS_PER_DAY` | Non | Plafonds par IP des nouvelles réponses sans code de place (défaut 30 / 100) ; larges car les opérateurs mobiles partagent les IP |
 | `CAMPAIGN_KEY_REQUIRED` | Non | `1` : une réponse en ligne doit porter un code imprimé (clé de campagne de la note / du flyer / de l'affiche, ou code de place du papillon). Défaut : facultatif |
+| `PLAN_REQUIRES_CODE` | Non | `1` : le plan du parking n'est montré qu'avec un code imprimé (clé de campagne, ou code de place avec sa place), venu du QR code ou saisi dans le formulaire ; sans code, on tape simplement son numéro de place. Défaut : plan public |
 | `RATE_KEYED_ANSWERS_PER_HOUR` | Non | Plafond par IP des réponses portant la clé de campagne (défaut 200) ; aucune limite par IP avec un code de place valide |
 | `RATE_API_PER_MINUTE` / `RATE_EDITS_PER_HOUR` | Non | Plafonds par IP des appels API (défaut 600) et des modifications par jeton (défaut 60) |
 | `PUBLISHER`, `PUBLICATION_DIRECTOR`, `PUBLISHER_CONTACT` | Non | Mentions légales : éditeur (particulier : nom facultatif), directeur de la publication, contact |

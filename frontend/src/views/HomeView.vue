@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, inject, watch, nextTick } from 'vue'
 import PlanPicker from '../components/PlanPicker.vue'
+import { fetchPlan } from '../planAccess.js'
 import HeroProgress from '../components/HeroProgress.vue'
 import Accordion from '../components/Accordion.vue'
 import ComprendreView from './ComprendreView.vue'
@@ -46,17 +47,22 @@ watch(isEnqueteOpen, (open) => {
   if (open) return
   readSubmissionMarker()
   loadStats()
+  if (!plan.value) loadPlan()
 })
 
-onMounted(async () => {
-  readSubmissionMarker()
-  const [, planRes] = await Promise.allSettled([loadStats(), fetch('/api/plan')])
-  try {
-    if (planRes.status === 'fulfilled' && planRes.value.ok) plan.value = await planRes.value.json()
-  } catch (error) {
-    console.error('Failed to load plan:', error)
-  }
+// The plan may need a printed code (QR code of a document, or code typed in the survey)
+const entryParams = inject('entryParams', ref({}))
+const loadPlan = async () => {
+  const { p, c, k } = entryParams.value || {}
+  plan.value = await fetchPlan(c ? { code: c, spot: p } : (k ? { code: k } : undefined))
   planLoaded.value = true
+}
+watch(entryParams, () => { if (!plan.value) loadPlan() })
+
+onMounted(() => {
+  readSubmissionMarker()
+  loadStats()
+  loadPlan()
 })
 
 const texts = computed(() => instanceConfig.value.texts || {})
@@ -98,7 +104,9 @@ const signature = computed(() => instanceConfig.value.campaign_signature || '')
 
 const monthYear = new Date().toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })
 
-const showPlan = computed(() => planLoaded.value && (plan.value?.places || parkingSpots.value > 0))
+// Without the plan geometry, the numbered grid is only drawn when the plan is public
+const showPlan = computed(() => planLoaded.value &&
+  (plan.value?.places || (instanceConfig.value.plan_requires_code === false && parkingSpots.value > 0)))
 const planCaption = computed(() => {
   if (texts.value.plan_caption) return texts.value.plan_caption
   return coproName.value ? `${coproName.value} – sous-sol` : 'Parking – sous-sol'

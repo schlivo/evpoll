@@ -7,8 +7,10 @@ import { dirname, join } from 'path';
 
 import surveyRouter from './routes/survey.js';
 import statsRouter, { handleExportCSV } from './routes/stats.js';
-import { globalLimiter } from './middleware/rateLimiter.js';
-import { CAMPAIGN_KEY_REQUIRED, normalizeKey } from './campaign.js';
+import { globalLimiter, planAccessLimiter } from './middleware/rateLimiter.js';
+import { CAMPAIGN_KEY_REQUIRED, PLAN_REQUIRES_CODE, normalizeKey, verifyCampaignKey } from './campaign.js';
+import { normalizeParkingSpots } from './parking.js';
+import { lotsForParkingSpot, verifyCode } from './lots.js';
 import { getEffectiveSettings } from './settings.js';
 import { COPRO, BUILDINGS, BUILDINGS_QUESTION, PARKING_SPOTS, LOTS, PRIVACY, TEXTS, loadParkingPlan } from './config.js';
 
@@ -113,15 +115,34 @@ app.get('/api/config', (req, res) => {
     campaign_deadline: settings.campaign_deadline,
     campaign_signature: settings.campaign_signature,
     // The survey then asks for the code printed on the documents
-    campaign_key_required: CAMPAIGN_KEY_REQUIRED
+    campaign_key_required: CAMPAIGN_KEY_REQUIRED,
+    // The parking plan is only sent with a printed code (GET /api/plan)
+    plan_requires_code: PLAN_REQUIRES_CODE
   });
 });
 
-// Public parking plan (geometry only, no answers), cached in memory
+// Parking plan (geometry only, no answers), cached in memory. With PLAN_REQUIRES_CODE it is
+// only sent with a printed code: the campaign key (X-Access-Code), or a place code with
+// its spot (X-Access-Code + X-Access-Spot). Wrong codes count towards planAccessLimiter.
 const parkingPlan = loadParkingPlan();
-app.get('/api/plan', (req, res) => {
+
+function hasPlanAccess(req) {
+  const code = req.get('X-Access-Code');
+  if (!code) return false;
+  if (verifyCampaignKey(code)) return true;
+  const { value } = normalizeParkingSpots(req.get('X-Access-Spot') || '');
+  const lots = value ? lotsForParkingSpot(value) : [];
+  return lots.length === 1 && verifyCode(lots[0].key, code);
+}
+
+app.get('/api/plan', planAccessLimiter, (req, res) => {
   if (!parkingPlan) return res.status(404).json({ error: 'Pas de plan pour cette instance' });
-  res.set('Cache-Control', 'public, max-age=3600');
+  if (!PLAN_REQUIRES_CODE) {
+    res.set('Cache-Control', 'public, max-age=3600');
+    return res.json(parkingPlan);
+  }
+  res.set('Cache-Control', 'private, no-store');
+  if (!hasPlanAccess(req)) return res.status(403).json({ error: 'code_required' });
   res.json(parkingPlan);
 });
 

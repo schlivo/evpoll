@@ -8,7 +8,12 @@ import db, { signValue } from './db.js';
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const KEY_LENGTH = 6;
 
-export const CAMPAIGN_KEY_REQUIRED = ['1', 'true', 'yes'].includes(String(process.env.CAMPAIGN_KEY_REQUIRED).toLowerCase());
+const envFlag = (name) => ['1', 'true', 'yes'].includes(String(process.env[name]).toLowerCase());
+
+export const CAMPAIGN_KEY_REQUIRED = envFlag('CAMPAIGN_KEY_REQUIRED');
+
+// The parking plan is only shown to visitors holding a printed code (key or place code)
+export const PLAN_REQUIRES_CODE = envFlag('PLAN_REQUIRES_CODE');
 
 const getVersion = () =>
   Number(db.prepare("SELECT value FROM meta WHERE key = 'campaign_key_version'").get()?.value) || 1;

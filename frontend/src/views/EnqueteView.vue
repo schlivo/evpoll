@@ -2,6 +2,7 @@
 import { ref, computed, inject, onMounted, watch, nextTick } from 'vue'
 import SvgIcon from '../components/SvgIcon.vue'
 import PlanPicker from '../components/PlanPicker.vue'
+import { fetchPlan } from '../planAccess.js'
 import { parkingSpotError } from '../utils/parking.js'
 
 const closeEnquete = inject('closeEnquete')
@@ -64,6 +65,9 @@ const placeCodeApplies = computed(() =>
 )
 
 const plan = ref(null)
+// The plan is public, or sent only with a printed code (see planAccess.js)
+const planPublic = ref(false)
+const showPlanPicker = computed(() => !!plan.value || (planPublic.value && parkingSpots.value > 0))
 const lots = ref([])
 
 // Optional "keep me informed" block on the thank-you screen of an express answer
@@ -237,7 +241,7 @@ onMounted(async () => {
     history.replaceState(history.state, '', location.pathname + (query ? '?' + query : '') + location.hash)
   }
 
-  fetch('/api/plan').then(r => (r.ok ? r.json() : null)).then(p => { plan.value = p }).catch(() => {})
+  loadPlan(placeCode.value ? { code: placeCode.value, spot: codeSpots.value.join(',') } : (campaignKey.value ? { code: campaignKey.value } : undefined))
   fetchFormToken()
 
   try {
@@ -255,6 +259,7 @@ onMounted(async () => {
       lots.value = config.lots || config.multi_spot_lots || []
       privacy.value = config.privacy || {}
       codeRequired.value = !!config.campaign_key_required
+      planPublic.value = config.plan_requires_code === false
       // Empty when the instance has no real address configured: then nothing is shown
       contactEmail.value = config.contact_email === 'conseil-syndical@exemple.fr' ? '' : (config.contact_email || '')
       syndicEmail.value = config.syndic_email === 'syndic@exemple.fr' ? '' : (config.syndic_email || '')
@@ -326,6 +331,19 @@ const selectOnPlan = (spot) => {
 }
 
 // Full plan with the chosen spot still highlighted, to check where it is in the car park
+const loadPlan = async (access) => {
+  const result = await fetchPlan(access)
+  if (result) plan.value = result
+}
+
+// A code typed by hand also opens the plan (place code: with the typed spot)
+let typedCodeTimer = null
+watch([typedCode, typedSpots], ([code]) => {
+  clearTimeout(typedCodeTimer)
+  if (plan.value || code.replace(/[^a-z0-9]/gi, '').length < 6) return
+  typedCodeTimer = setTimeout(() => loadPlan({ code: code.trim(), spot: typedSpots.value.join(',') }), 400)
+})
+
 const showFullPlan = ref(false)
 const planBox = ref(null)
 
@@ -664,7 +682,7 @@ const switchToFull = () => {
             Place{{ spotDescription.plural ? 's' : '' }} {{ spotDescription.places }}
             <template v-if="spotDescription.lot"> · <strong>lot n°{{ spotDescription.lot }}</strong> · {{ spotDescription.type }}</template>
           </p>
-          <p v-else id="spot-help" class="form-hint">Touchez votre place sur le plan ou tapez son numéro. Plusieurs places : séparez-les par une virgule.</p>
+          <p v-else id="spot-help" class="form-hint">{{ showPlanPicker ? 'Touchez votre place sur le plan ou tapez son numéro.' : 'Tapez le numéro de votre place.' }} Plusieurs places : séparez-les par une virgule.</p>
           <!-- Where the answer comes from (validated by the server only when sending) -->
           <p v-if="placeCode && placeCodeApplies" class="origin-line">
             Lien du papillon de la place {{ codeSpots.join('-') }}
@@ -686,7 +704,7 @@ const switchToFull = () => {
             </div>
           </div>
 
-          <div v-if="!formData.no_parking" ref="planBox" class="plan-box" :class="{ mini: typedSpots.length && !showFullPlan }">
+          <div v-if="!formData.no_parking && showPlanPicker" ref="planBox" class="plan-box" :class="{ mini: typedSpots.length && !showFullPlan }">
             <PlanPicker
               :plan="plan"
               :parking-spots="parkingSpots || 0"
@@ -699,7 +717,7 @@ const switchToFull = () => {
             />
           </div>
           <button
-            v-if="typedSpots.length && !formData.no_parking"
+            v-if="typedSpots.length && !formData.no_parking && showPlanPicker"
             type="button"
             class="link-button"
             :aria-pressed="showFullPlan"
