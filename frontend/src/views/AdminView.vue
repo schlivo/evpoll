@@ -6,6 +6,7 @@ import AdminConflicts from '../components/AdminConflicts.vue'
 import AdminPaperEntry from '../components/AdminPaperEntry.vue'
 import AdminCodes from '../components/AdminCodes.vue'
 import AdminSettings from '../components/AdminSettings.vue'
+import AdminRights from '../components/AdminRights.vue'
 
 const isAuthenticated = ref(false)
 const password = ref('')
@@ -573,6 +574,7 @@ onMounted(() => {
         <AdminConflicts ref="conflictsPanel" :token="authToken" @changed="loadStats" @unauthorized="logout" />
         <AdminPaperEntry :token="authToken" :building-choices="buildingChoices" @saved="refreshAfterChange" @unauthorized="logout" />
         <AdminCodes :token="authToken" @unauthorized="logout" />
+        <AdminRights :token="authToken" @changed="refreshAfterChange" @unauthorized="logout" />
 
         <!-- Additional stats (only show section and items with > 0 respondents) -->
         <section

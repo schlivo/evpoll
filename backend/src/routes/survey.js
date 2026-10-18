@@ -101,10 +101,6 @@ export const surveyValidation = [
     .optional()
     .trim()
     .isIn(['6mois', '1an', '2ans', 'plus', '']).withMessage('Délai invalide'),
-  body('comments')
-    .optional()
-    .trim()
-    .isLength({ max: 1000 }).withMessage('Commentaire trop long'),
   body('email')
     .optional({ values: 'falsy' })
     .trim()
@@ -139,7 +135,8 @@ function toRow(body) {
     interested: body.interested,
     preferred_solution: body.preferred_solution || null,
     timeline: body.timeline || null,
-    comments: body.comments || null,
+    // The free-text comment field was removed (data minimisation): never stored for new answers
+    comments: null,
     email: consent ? body.email : null,
     consent_contact: consent ? 1 : 0,
     consent_timestamp: consent && body.consent_timestamp ? body.consent_timestamp : null
@@ -443,7 +440,7 @@ router.get('/:id', editLimiter, (req, res) => {
     });
   }
   const fields = ['parking_spot', 'no_parking', 'building', 'apartment', 'status', 'has_ev', 'interested',
-    'preferred_solution', 'timeline', 'comments', 'email', 'consent_contact'];
+    'preferred_solution', 'timeline', 'email', 'consent_contact'];
   const response = Object.fromEntries(fields.map(f => [f, row[f]]));
   response.no_parking = !!row.no_parking;
   response.consent_contact = !!row.consent_contact;

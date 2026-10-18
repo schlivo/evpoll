@@ -660,6 +660,47 @@ router.post('/rgpd/request', rgpdLimiter, (req, res) => {
   }
 });
 
+// ---- Rights requests without email: most answers have none, so the admin finds them
+// by spot or answer number (after checking the requester owns the lot, see the procedure)
+
+// Fields handed to the person for an access request (technical hashes excluded)
+const PERSON_FIELDS = `id, created_at, building, apartment, parking_spot, no_parking, status, has_ev,
+  interested, preferred_solution, timeline, email, consent_contact, consent_timestamp, express,
+  source, verification, review_status, campaign_key`;
+
+// GET /api/stats/admin/responses?spot=83 or ?id=12 - Find answers for a rights request
+router.get('/admin/responses', requireAuth, (req, res) => {
+  const id = parseInt(req.query.id, 10);
+  const spot = parseInt(req.query.spot, 10);
+  if (!id && !spot) return res.status(400).json({ success: false, error: 'Indiquez une place ou un numéro de réponse' });
+
+  const rows = id
+    ? db.prepare(`SELECT ${PERSON_FIELDS} FROM responses WHERE id = ?`).all(id)
+    : db.prepare(`SELECT ${PERSON_FIELDS} FROM responses WHERE parking_spot IS NOT NULL AND parking_spot != ''`).all()
+      .filter(r => extractSpotNumbers(r.parking_spot).includes(spot));
+
+  logAuditEvent('rgpd_search', getClientIP(req), { by: id ? 'id' : 'spot', results: rows.length });
+  res.json({ success: true, responses: rows });
+});
+
+// GET /api/stats/admin/responses/:id/export - One answer as JSON, to send to the person
+router.get('/admin/responses/:id/export', requireAuth, (req, res) => {
+  const row = db.prepare(`SELECT ${PERSON_FIELDS} FROM responses WHERE id = ?`).get(parseInt(req.params.id, 10));
+  if (!row) return res.status(404).json({ success: false, error: 'Réponse introuvable' });
+  logAuditEvent('rgpd_export', getClientIP(req), { response_id: row.id });
+  res.setHeader('Content-Disposition', `attachment; filename="reponse-${row.id}.json"`);
+  res.json({ exported_at: new Date().toISOString(), response: row });
+});
+
+// DELETE /api/stats/admin/responses/:id - Erase one answer (right to erasure)
+router.delete('/admin/responses/:id', requireAuth, (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const result = db.prepare('DELETE FROM responses WHERE id = ?').run(id);
+  if (!result.changes) return res.status(404).json({ success: false, error: 'Réponse introuvable' });
+  logAuditEvent('rgpd_delete', getClientIP(req), { response_id: id });
+  res.json({ success: true, deleted_id: id });
+});
+
 // GET /api/stats/rgpd/export/:email - Export personal data
 // Protected by admin auth - admin handles RGPD requests manually
 router.get('/rgpd/export/:email', requireAuth, (req, res) => {

@@ -34,6 +34,7 @@ provide('instanceConfig', instanceConfig)
 
 const privacy = computed(() => instanceConfig.value.privacy || {})
 const legal = computed(() => instanceConfig.value.legal || {})
+const contactIsGmail = computed(() => /@(gmail|googlemail)\.com$/i.test(instanceConfig.value.contact_email || ''))
 const retentionText = computed(() => {
   const days = privacy.value.retention_days || 730
   return days % 365 === 0 ? `${days / 365} an${days >= 730 ? 's' : ''}` : `${days} jours`
@@ -338,6 +339,7 @@ onUnmounted(() => {
             <li>Données chiffrées en transit (HTTPS)</li>
             <li v-if="privacy.host">Hébergeur : {{ privacy.host }}. Aucune transmission à d'autres tiers.</li>
             <li v-else>Aucune transmission à des tiers autres que l'hébergeur</li>
+            <li v-if="contactIsGmail">Les messages envoyés à l'adresse de contact sont reçus dans une boîte Gmail (Google), qui en assure le stockage.</li>
             <li>Mots de passe administrateur hashés (bcrypt)</li>
             <li>Protection contre les attaques par force brute</li>
           </ul>

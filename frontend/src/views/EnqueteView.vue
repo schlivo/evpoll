@@ -82,7 +82,6 @@ const formData = ref({
   interested: '',
   preferred_solution: '',
   timeline: '',
-  comments: '',
   email: '',
   consent_contact: false,
   consent_timestamp: null
@@ -158,7 +157,7 @@ watch(() => formData.value.consent_contact, (newValue) => {
 const resetAnswers = () => {
   Object.assign(formData.value, {
     building: '', apartment: '', parking_spot: '', no_parking: false, status: '',
-    has_ev: '', interested: '', preferred_solution: '', timeline: '', comments: '',
+    has_ev: '', interested: '', preferred_solution: '', timeline: '',
     email: '', consent_contact: false, consent_timestamp: null
   })
   answeredLotPrompts.value = []
@@ -1192,26 +1191,12 @@ const switchToFull = () => {
           </div>
         </div>
 
-        <!-- Step 4: Comments & Contact -->
+        <!-- Step 4: Contact (no free-text field: nothing beyond what the survey needs) -->
         <div v-show="currentStep === 4" class="form-step fade-in">
           <h2>Pour finir</h2>
           <p class="step-description">
-            Partagez vos remarques et indiquez si vous souhaitez être tenu informé.
+            Indiquez si vous souhaitez être tenu informé de la suite du projet.
           </p>
-
-          <div class="form-group">
-            <label class="form-label" for="comments">
-              Avez-vous des remarques ou questions ?
-            </label>
-            <textarea
-              id="comments"
-              v-model="formData.comments"
-              class="form-textarea"
-              placeholder="Vos commentaires, suggestions ou questions..."
-              rows="4"
-            ></textarea>
-            <span class="form-hint">Optionnel - 1000 caractères maximum</span>
-          </div>
 
           <div class="form-group">
             <label class="form-label" for="email">

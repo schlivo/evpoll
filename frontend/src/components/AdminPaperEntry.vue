@@ -11,7 +11,7 @@ const emit = defineEmits(['saved', 'unauthorized'])
 
 const empty = () => ({
   parking_spot: '', no_parking: false, building: '', status: '',
-  has_ev: '', interested: '', comments: ''
+  has_ev: '', interested: ''
 })
 const form = ref(empty())
 const busy = ref(false)
@@ -91,10 +91,6 @@ const submit = async () => {
           <option value="peut-etre">Peut-être</option>
           <option value="non">Non</option>
         </select>
-      </label>
-      <label class="wide">
-        Commentaire
-        <input v-model="form.comments" class="form-input" maxlength="1000" />
       </label>
       <button type="submit" class="btn btn-primary" :disabled="busy">
         {{ busy ? 'Enregistrement…' : 'Enregistrer la réponse papier' }}
