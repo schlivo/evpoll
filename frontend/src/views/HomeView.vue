@@ -4,6 +4,7 @@ import StatCard from '../components/StatCard.vue'
 import SvgIcon from '../components/SvgIcon.vue'
 
 const navigateToSection = inject('navigateToSection')
+const openEnquete = inject('openEnquete')
 const coproName = inject('coproName')
 
 const stats = ref({
@@ -48,9 +49,42 @@ const evCount = () => {
           pour véhicules électriques dans notre copropriété.
         </p>
         <div class="hero-actions">
-          <button @click="navigateToSection('comprendre')" class="btn btn-primary btn-lg">
+          <button @click="openEnquete('express')" class="btn btn-primary btn-lg">
+            Répondre en 30 secondes
+          </button>
+          <button @click="navigateToSection('comprendre')" class="btn btn-secondary btn-lg">
             En savoir plus
           </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="why-now-section">
+      <div class="container">
+        <div class="why-now">
+          <h2>Pourquoi maintenant ?</h2>
+          <ul>
+            <li>
+              Le gazole a dépassé <strong>2 € le litre</strong> en mars 2026,
+              avec un pic à 2,40 € le 20 septembre.
+            </li>
+            <li>
+              L'électrique a représenté <strong>41,1 % des voitures neuves</strong>
+              vendues en France en septembre 2026 (31 % sur neuf mois).
+            </li>
+            <li>
+              Rouler en électrique revient <strong>2 à 3 fois moins cher</strong> qu'au gazole,
+              à condition de pouvoir recharger chez soi.
+            </li>
+          </ul>
+          <p class="why-now-source">
+            Source :
+            <a
+              href="https://www.connaissancedesenergies.org/afp/train-bus-covoiturage-les-solutions-face-a-la-hantise-de-la-pompe-a-essence-261006"
+              target="_blank"
+              rel="noopener"
+            >AFP / Connaissance des Énergies, 6 octobre 2026</a>
+          </p>
         </div>
       </div>
     </section>
@@ -65,6 +99,14 @@ const evCount = () => {
             icon="clipboard"
           />
           <StatCard
+            v-if="stats.parking_spots"
+            :value="stats.declared_spots || 0"
+            :suffix="` / ${stats.parking_spots}`"
+            label="Places déclarées"
+            icon="ev-car"
+          />
+          <StatCard
+            v-else
             :value="stats.participation_rate"
             suffix="%"
             label="Taux de participation"
@@ -107,8 +149,9 @@ const evCount = () => {
             </div>
             <h3>Optimiser les coûts</h3>
             <p>
-              Une installation collective permet de mutualiser les coûts
-              et de bénéficier d'aides financières plus importantes.
+              Une installation collective permet de mutualiser les coûts.
+              Avec la solution Enedis, l'infrastructure ne coûte rien à la copropriété ;
+              d'éventuels frais annexes seront chiffrés avant l'AG.
             </p>
           </div>
           <div class="info-card">
@@ -165,10 +208,10 @@ const evCount = () => {
     <section class="cta-section">
       <div class="container">
         <div class="cta-card">
-          <h2>Plus on est nombreux, plus le projet avance !</h2>
+          <h2>Chaque réponse compte</h2>
           <p>
-            Les opérateurs lancent les projets en fonction du nombre d'intéressés.
-            Chaque réponse compte pour rendre notre copropriété prioritaire.
+            Vos réponses servent à dimensionner le projet, à le présenter en AG
+            avec des chiffres réels et à obtenir de meilleures offres des opérateurs.
           </p>
           <div class="cta-highlight">
             Même sans véhicule électrique aujourd'hui, votre intérêt futur compte !
@@ -231,6 +274,45 @@ const evCount = () => {
 .stats-section {
   padding: 3rem 0;
   background: var(--color-bg-alt);
+}
+
+.why-now-section {
+  padding: 2rem 0 0;
+}
+
+.why-now {
+  max-width: 720px;
+  margin: 0 auto;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-primary);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+}
+
+.why-now h2 {
+  font-size: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.why-now ul {
+  padding-left: 1.25rem;
+  margin: 0 0 0.75rem;
+}
+
+.why-now li {
+  color: var(--color-text-light);
+  margin-bottom: 0.5rem;
+}
+
+.why-now-source {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.why-now-source a {
+  color: var(--color-primary);
+  text-decoration: underline;
 }
 
 .stats-grid {

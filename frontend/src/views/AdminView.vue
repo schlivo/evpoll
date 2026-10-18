@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import SvgIcon from '../components/SvgIcon.vue'
+import ParkingPlan from '../components/ParkingPlan.vue'
 
 const isAuthenticated = ref(false)
 const password = ref('')
@@ -8,6 +9,9 @@ const authToken = ref('') // Store auth token for API calls
 const tokenExpiry = ref(null)
 const passwordError = ref('')
 const stats = ref(null)
+const spots = ref(null)
+const parkingPlan = ref(null)
+const buildingLabels = ref({})
 const loading = ref(false)
 const loginLoading = ref(false)
 const error = ref('')
@@ -66,6 +70,8 @@ const logout = async () => {
   sessionStorage.removeItem(TOKEN_STORAGE_KEY)
   sessionStorage.removeItem(TOKEN_EXPIRY_KEY)
   stats.value = null
+  spots.value = null
+  parkingPlan.value = null
 }
 
 // Check if token is still valid
@@ -81,6 +87,7 @@ const loadStats = async () => {
     const response = await fetch('/api/stats')
     if (response.ok) {
       stats.value = await response.json()
+      loadSpots()
     } else {
       error.value = 'Erreur lors du chargement des statistiques'
     }
@@ -90,6 +97,41 @@ const loadStats = async () => {
     loading.value = false
   }
 }
+
+// Spot list is personal data: admin-only endpoint
+const loadSpots = async () => {
+  try {
+    const response = await fetch('/api/stats/admin/spots', {
+      headers: { 'Authorization': `Bearer ${authToken.value}` }
+    })
+    if (response.ok) {
+      spots.value = await response.json()
+    } else if (response.status === 401) {
+      logout()
+      return
+    }
+    const configResponse = await fetch('/api/config')
+    if (configResponse.ok) {
+      const config = await configResponse.json()
+      buildingLabels.value = Object.fromEntries((config.building_choices || []).map(c => [c.id, c.label]))
+    }
+    const planResponse = await fetch('/api/stats/admin/plan', {
+      headers: { 'Authorization': `Bearer ${authToken.value}` }
+    })
+    if (planResponse.ok) {
+      parkingPlan.value = await planResponse.json()
+    }
+  } catch (err) {
+    spots.value = null
+  }
+}
+
+/** Spots where at least one respondent answered "oui" (list for Enedis immediate connections). */
+const interestedSpots = computed(() =>
+  (spots.value?.spots || [])
+    .filter(s => s.responses.some(r => r.interested === 'oui'))
+    .map(s => s.spot)
+)
 
 const exportCSV = async () => {
   try {
@@ -152,7 +194,8 @@ const evLabels = {
 
 const statusLabels = {
   'proprietaire': 'Propriétaire',
-  'locataire': 'Locataire'
+  'locataire': 'Locataire',
+  'non_renseigne': 'Non renseigné'
 }
 
 const solutionLabels = {
@@ -275,6 +318,16 @@ onMounted(() => {
             <div class="metric-label">Participation</div>
             <div class="metric-detail">sur {{ stats.total_lots }} lots</div>
           </div>
+          <div v-if="stats.parking_spots" class="metric-card primary">
+            <div class="metric-value">{{ stats.declared_spots }}<small> / {{ stats.parking_spots }}</small></div>
+            <div class="metric-label">Places déclarées</div>
+            <div class="metric-detail">{{ stats.no_parking || 0 }} « pas de place » · {{ stats.express_responses || 0 }} express</div>
+          </div>
+          <div v-if="stats.declared_lots !== null && stats.declared_lots !== undefined" class="metric-card primary">
+            <div class="metric-value">{{ stats.declared_lots }}<small> / {{ stats.total_lots }}</small></div>
+            <div class="metric-label">Lots déclarés</div>
+            <div class="metric-detail">un lot double compte une fois</div>
+          </div>
           <div class="metric-card success">
             <div class="metric-value">{{ (stats.interest?.oui || 0) + (stats.interest?.['peut-etre'] || 0) }}</div>
             <div class="metric-label">Intéressés</div>
@@ -363,7 +416,7 @@ onMounted(() => {
                 :key="item.key"
                 class="bar-item"
               >
-                <div class="bar-label">Bât. {{ item.key }}</div>
+                <div class="bar-label">{{ item.key === 'non_renseigne' ? 'Non renseigné' : (buildingLabels[item.key] || 'Bât. ' + item.key) }}</div>
                 <div class="bar-wrapper">
                   <div
                     class="bar-fill"
@@ -424,6 +477,61 @@ onMounted(() => {
             </div>
           </div>
         </div>
+
+        <!-- Declared parking spots (sorted) -->
+        <section v-if="spots && (spots.parking_spots || spots.spots.length || spots.unrecognized.length)" class="spots-section">
+          <h3>Places déclarées</h3>
+          <p v-if="interestedSpots.length" class="spots-summary">
+            <strong>Places intéressées (oui) :</strong> {{ interestedSpots.join(', ') }}
+          </p>
+          <p v-if="spots.interested_lots?.length" class="spots-summary">
+            <strong>Lots intéressés ({{ spots.interested_lots.length }}) :</strong>
+            {{ spots.interested_lots.map(l => `n°${l.lot} (${l.places.join('-')})`).join(', ') }}
+          </p>
+          <ParkingPlan
+            v-if="spots.parking_spots"
+            :parking-spots="spots.parking_spots"
+            :lots="parkingPlan?.lots || []"
+            :spots="spots.spots"
+            :plan="parkingPlan?.plan || null"
+            class="spots-plan"
+          />
+          <div v-if="spots.spots.length" class="spots-table-wrapper">
+            <table class="spots-table">
+              <thead>
+                <tr>
+                  <th>Place</th>
+                  <th>Intéressé</th>
+                  <th>VE</th>
+                  <th>Statut</th>
+                  <th>Réponse</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-for="item in spots.spots" :key="item.spot">
+                  <tr
+                    v-for="(r, i) in item.responses"
+                    :key="item.spot + '-' + r.id"
+                    :class="{ conflict: item.responses.length > 1 }"
+                  >
+                    <td>{{ i === 0 ? item.spot : '' }}</td>
+                    <td :class="'interest-' + r.interested">{{ interestLabels[r.interested] || r.interested }}</td>
+                    <td>{{ evLabels[r.has_ev] || r.has_ev }}</td>
+                    <td>{{ statusLabels[r.status] || r.status }}</td>
+                    <td>#{{ r.id }}</td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+          <p v-if="spots.spots.some(s => s.responses.length > 1)" class="spots-note">
+            Les lignes surlignées signalent une place déclarée par plusieurs réponses (propriétaire et locataire, ou doublon) : à vérifier.
+          </p>
+          <p v-if="spots.unrecognized.length" class="spots-note">
+            Numéros non reconnus :
+            <span v-for="u in spots.unrecognized" :key="u.id">« {{ u.value }} » (#{{ u.id }}) </span>
+          </p>
+        </section>
 
         <!-- Additional stats (only show section and items with > 0 respondents) -->
         <section
@@ -550,7 +658,7 @@ onMounted(() => {
 
 @media (min-width: 768px) {
   .metrics-row {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   }
 }
 
@@ -722,6 +830,64 @@ onMounted(() => {
 
 .donut-value {
   font-weight: 600;
+}
+
+/* Declared spots */
+.spots-section {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.spots-section h3 {
+  margin-bottom: 0.75rem;
+}
+
+.spots-plan {
+  margin: 1rem 0 1.5rem;
+}
+
+.spots-summary {
+  margin-bottom: 1rem;
+  color: var(--color-text-light);
+}
+
+.spots-table-wrapper {
+  overflow-x: auto;
+}
+
+.spots-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.spots-table th,
+.spots-table td {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.spots-table td:first-child {
+  font-weight: 700;
+}
+
+.spots-table tr.conflict {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.spots-table .interest-oui {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.spots-note {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
 }
 
 /* Additional stats */

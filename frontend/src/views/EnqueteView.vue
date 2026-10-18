@@ -1,9 +1,12 @@
 <script setup>
 import { ref, computed, inject, onMounted, watch } from 'vue'
 import SvgIcon from '../components/SvgIcon.vue'
+import { parkingSpotError } from '../utils/parking.js'
 
 const closeEnquete = inject('closeEnquete')
 const openPrivacy = inject('openPrivacy', () => {})
+// 'express' (one screen) or 'full' (4 steps), chosen by App.vue
+const enqueteMode = inject('enqueteMode', ref('express'))
 
 const openPrivacyPolicy = () => {
   openPrivacy()
@@ -17,11 +20,15 @@ const submitError = ref('')
 const configLoading = ref(true)
 const hasExistingSubmission = ref(false)
 const existingSubmissionBuilding = ref('')
+// Set after an express answer so the full form completes it instead of adding a new one
+const editContext = ref(null)
+const lastSubmitWasExpress = ref(false)
 
 const formData = ref({
   building: '',
   apartment: '',
   parking_spot: '',
+  no_parking: false,
   status: '',
   has_ev: '',
   interested: '',
@@ -34,7 +41,14 @@ const formData = ref({
 })
 
 const errors = ref({})
-const buildings = ref(['A', 'B', 'C', 'D']) // Default fallback
+// Building / staircase choices from the instance config
+const buildingChoices = ref(['A', 'B', 'C', 'D'].map(id => ({ id, label: `Bâtiment ${id}` })))
+const buildingQuestion = ref('Votre bâtiment')
+const parkingSpots = ref(null)
+const multiSpotLots = ref([])
+const privacy = ref({})
+// Spots for which the respondent answered the "both spots?" question
+const answeredLotPrompts = ref([])
 const contactEmail = ref('conseil-syndical@exemple.fr')
 const syndicEmail = ref('syndic@exemple.fr')
 
@@ -99,7 +113,15 @@ onMounted(async () => {
     const response = await fetch('/api/config')
     if (response.ok) {
       const config = await response.json()
-      buildings.value = config.buildings || buildings.value
+      if (config.building_choices) {
+        buildingChoices.value = config.building_choices
+      } else if (config.buildings) {
+        buildingChoices.value = config.buildings.map(id => ({ id, label: `Bâtiment ${id}` }))
+      }
+      buildingQuestion.value = config.building_question || buildingQuestion.value
+      parkingSpots.value = config.parking_spots || null
+      multiSpotLots.value = config.multi_spot_lots || []
+      privacy.value = config.privacy || {}
       contactEmail.value = config.contact_email || contactEmail.value
       syndicEmail.value = config.syndic_email || syndicEmail.value
     }
@@ -112,13 +134,76 @@ onMounted(async () => {
 
 const progress = computed(() => (currentStep.value / totalSteps) * 100)
 
+const spotPlaceholder = computed(() =>
+  parkingSpots.value ? `Entre 1 et ${parkingSpots.value}, ex : 45 ou 83, 84` : 'Ex : 45 ou 83, 84'
+)
+
+// Typing a spot number unticks "no spot", and vice versa
+watch(() => formData.value.parking_spot, (value) => {
+  if (value?.trim()) formData.value.no_parking = false
+})
+watch(() => formData.value.no_parking, (value) => {
+  if (value) formData.value.parking_spot = ''
+})
+
+const typedSpots = computed(() =>
+  (formData.value.parking_spot || '').split(/[,;/\s]+|\bet\b/i).map(p => parseInt(p, 10)).filter(Boolean)
+)
+
+// First typed spot belonging to a multi-spot lot whose other spots are missing
+const lotPrompt = computed(() => {
+  for (const spot of typedSpots.value) {
+    if (answeredLotPrompts.value.includes(spot)) continue
+    const lot = multiSpotLots.value.find(l => l.places.includes(spot))
+    if (lot && !lot.places.every(p => typedSpots.value.includes(p))) {
+      return { spot, lot, others: lot.places.filter(p => !typedSpots.value.includes(p)) }
+    }
+  }
+  return null
+})
+
+const answerLotPrompt = (includeAll) => {
+  const prompt = lotPrompt.value
+  if (!prompt) return
+  answeredLotPrompts.value.push(...prompt.lot.places)
+  if (includeAll) {
+    const spots = [...new Set([...typedSpots.value, ...prompt.lot.places])].sort((a, b) => a - b)
+    formData.value.parking_spot = spots.join(', ')
+  }
+}
+
+const retentionText = computed(() => {
+  const days = privacy.value.retention_days || 730
+  return days % 365 === 0 ? `${days / 365} an${days >= 730 ? 's' : ''}` : `${days} jours`
+})
+
+const validateParkingSpot = () => {
+  const { parking_spot, no_parking } = formData.value
+  if (!parking_spot?.trim() && !no_parking) {
+    errors.value.parking_spot = 'Indiquez votre numéro de place, ou cochez « Je n\'ai pas de place / je ne sais pas »'
+    return
+  }
+  const error = parkingSpotError(parking_spot, parkingSpots.value)
+  if (error) errors.value.parking_spot = error
+}
+
+const validateExpress = () => {
+  errors.value = {}
+  validateParkingSpot()
+  if (!formData.value.has_ev) {
+    errors.value.has_ev = 'Veuillez répondre à cette question'
+  }
+  if (!formData.value.interested) {
+    errors.value.interested = 'Veuillez indiquer votre intérêt'
+  }
+  return Object.keys(errors.value).length === 0
+}
+
 const validateStep = (step) => {
   errors.value = {}
 
   if (step === 1) {
-    if (!formData.value.building) {
-      errors.value.building = 'Veuillez sélectionner votre bâtiment'
-    }
+    validateParkingSpot()
     if (!formData.value.status) {
       errors.value.status = 'Veuillez indiquer votre statut'
     }
@@ -155,19 +240,23 @@ const prevStep = () => {
   }
 }
 
-const submitForm = async () => {
-  if (!validateStep(currentStep.value)) return
-
+const sendAnswers = async (express) => {
   isSubmitting.value = true
   submitError.value = ''
 
+  const completing = !express && editContext.value
+  const url = completing ? `/api/survey/${editContext.value.id}` : '/api/survey'
+  const payload = completing
+    ? { ...formData.value, edit_token: editContext.value.token }
+    : { ...formData.value, express }
+
   try {
-    const response = await fetch('/api/survey', {
-      method: 'POST',
+    const response = await fetch(url, {
+      method: completing ? 'PUT' : 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(formData.value)
+      body: JSON.stringify(payload)
     })
 
     const data = await response.json()
@@ -175,6 +264,8 @@ const submitForm = async () => {
     if (response.ok) {
       // Save submission marker to localStorage
       saveSubmissionMarker(formData.value.building)
+      editContext.value = express && data.edit_token ? { id: data.id, token: data.edit_token } : null
+      lastSubmitWasExpress.value = express
       isSubmitted.value = true
     } else if (response.status === 409 && data.error === 'duplicate') {
       // Duplicate submission detected by server
@@ -187,6 +278,31 @@ const submitForm = async () => {
   } finally {
     isSubmitting.value = false
   }
+}
+
+const submitExpress = async () => {
+  if (!validateExpress()) return
+  await sendAnswers(true)
+}
+
+const submitForm = async () => {
+  if (!validateStep(currentStep.value)) return
+  await sendAnswers(false)
+}
+
+// Switch to the full form, prefilled with the express answers
+const completeAnswers = () => {
+  isSubmitted.value = false
+  enqueteMode.value = 'full'
+  currentStep.value = 1
+  errors.value = {}
+  submitError.value = ''
+}
+
+const switchToFull = () => {
+  enqueteMode.value = 'full'
+  errors.value = {}
+  submitError.value = ''
 }
 
 </script>
@@ -235,9 +351,131 @@ const submitForm = async () => {
           Votre réponse a été enregistrée. Elle nous aidera à définir
           la meilleure solution pour notre copropriété.
         </p>
-        <button @click="closeEnquete" class="btn btn-primary">
-          Retour à l'accueil
-        </button>
+        <div class="success-actions">
+          <button
+            v-if="lastSubmitWasExpress && editContext"
+            @click="completeAnswers"
+            class="btn btn-secondary"
+          >
+            Compléter mes réponses (facultatif)
+          </button>
+          <button @click="closeEnquete" class="btn btn-primary">
+            Retour à l'accueil
+          </button>
+        </div>
+      </div>
+
+      <!-- Express answer: one screen -->
+      <div v-else-if="enqueteMode === 'express'" class="survey-form">
+        <div class="form-step express-card fade-in">
+          <h2>Répondre en 30 secondes</h2>
+          <p class="step-description">
+            Trois questions suffisent. Votre numéro de place permet de préparer
+            le raccordement de votre emplacement, même sans véhicule électrique aujourd'hui.
+          </p>
+
+          <div class="form-group">
+            <label class="form-label" for="express_parking_spot">
+              Votre numéro de place de parking <span class="required">*</span>
+            </label>
+            <input
+              type="text"
+              id="express_parking_spot"
+              v-model="formData.parking_spot"
+              class="form-input"
+              inputmode="numeric"
+              autocomplete="off"
+              :placeholder="spotPlaceholder"
+              :disabled="formData.no_parking"
+            />
+            <span class="form-hint">Plusieurs places ? Séparez-les par une virgule.</span>
+            <label class="checkbox-option compact" :class="{ selected: formData.no_parking }">
+              <input type="checkbox" v-model="formData.no_parking" />
+              <span class="checkbox-label">
+                <strong>Je n'ai pas de place / je ne sais pas</strong>
+              </span>
+            </label>
+            <div v-if="lotPrompt" class="lot-prompt">
+              <p>
+                Place {{ lotPrompt.spot }} – lot double {{ lotPrompt.lot.places.join('-') }}
+                (lot n°{{ lotPrompt.lot.lot }}). Vos deux places sont-elles concernées ?
+              </p>
+              <div class="lot-prompt-actions">
+                <button type="button" class="btn btn-secondary btn-sm" @click="answerLotPrompt(true)">
+                  Oui, ajouter la place {{ lotPrompt.others.join(', ') }}
+                </button>
+                <button type="button" class="btn btn-link btn-sm" @click="answerLotPrompt(false)">
+                  Non, seulement la {{ lotPrompt.spot }}
+                </button>
+              </div>
+            </div>
+            <span v-if="errors.parking_spot" class="form-error">{{ errors.parking_spot }}</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">
+              Véhicule électrique ou hybride rechargeable ? <span class="required">*</span>
+            </label>
+            <div class="pill-group">
+              <label
+                v-for="opt in [{ v: 'oui', l: 'Oui' }, { v: 'projet', l: 'En projet' }, { v: 'non', l: 'Non' }]"
+                :key="opt.v"
+                class="pill-option"
+                :class="{ selected: formData.has_ev === opt.v }"
+              >
+                <input type="radio" v-model="formData.has_ev" :value="opt.v" name="express_has_ev" />
+                {{ opt.l }}
+              </label>
+            </div>
+            <span v-if="errors.has_ev" class="form-error">{{ errors.has_ev }}</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">
+              Intéressé par une borne sur votre place ? <span class="required">*</span>
+            </label>
+            <div class="pill-group">
+              <label
+                v-for="opt in [{ v: 'oui', l: 'Oui' }, { v: 'peut-etre', l: 'Peut-être' }, { v: 'non', l: 'Non' }]"
+                :key="opt.v"
+                class="pill-option"
+                :class="{ selected: formData.interested === opt.v }"
+              >
+                <input type="radio" v-model="formData.interested" :value="opt.v" name="express_interested" />
+                {{ opt.l }}
+              </label>
+            </div>
+            <span v-if="errors.interested" class="form-error">{{ errors.interested }}</span>
+          </div>
+
+          <div class="rgpd-notice">
+            <p>
+              <strong>Données :</strong> votre réponse n'est pas anonyme (le n° de place se rattache à un lot).
+              Elle sert uniquement au projet IRVE, n'est diffusée que de façon agrégée et est conservée
+              {{ retentionText }} au plus. Accès, rectification, suppression, opposition :
+              <a :href="'mailto:' + contactEmail">{{ contactEmail }}</a>.
+              <a href="#" @click.prevent="openPrivacyPolicy" class="privacy-link">Politique complète</a>
+            </p>
+          </div>
+
+          <div v-if="submitError" class="alert alert-error">
+            {{ submitError }}
+          </div>
+        </div>
+
+        <div class="form-navigation">
+          <button type="button" class="btn btn-link" @click="switchToFull">
+            Questionnaire complet (4 étapes)
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            :disabled="isSubmitting"
+            @click="submitExpress"
+          >
+            {{ isSubmitting ? 'Envoi en cours...' : 'Envoyer' }}
+          </button>
+        </div>
       </div>
 
       <!-- Form -->
@@ -257,33 +495,71 @@ const submitForm = async () => {
         <div v-show="currentStep === 1" class="form-step fade-in">
           <h2>Votre situation</h2>
           <p class="step-description">
-            Ces informations permettent d'avoir une vue globale par bâtiment,
-            sans identifier les personnes.
+            Votre numéro de place permet de savoir quelles places équiper.
+            Il ne sera jamais publié individuellement.
           </p>
 
           <div class="form-group">
+            <label class="form-label" for="parking_spot">
+              Votre numéro de place de parking <span class="required">*</span>
+            </label>
+            <input
+              type="text"
+              id="parking_spot"
+              v-model="formData.parking_spot"
+              class="form-input"
+              inputmode="numeric"
+              autocomplete="off"
+              :placeholder="spotPlaceholder"
+              :disabled="formData.no_parking"
+            />
+            <span class="form-hint">Plusieurs places ? Séparez-les par une virgule.</span>
+            <label class="checkbox-option compact" :class="{ selected: formData.no_parking }">
+              <input type="checkbox" v-model="formData.no_parking" />
+              <span class="checkbox-label">
+                <strong>Je n'ai pas de place / je ne sais pas</strong>
+              </span>
+            </label>
+            <div v-if="lotPrompt" class="lot-prompt">
+              <p>
+                Place {{ lotPrompt.spot }} – lot double {{ lotPrompt.lot.places.join('-') }}
+                (lot n°{{ lotPrompt.lot.lot }}). Vos deux places sont-elles concernées ?
+              </p>
+              <div class="lot-prompt-actions">
+                <button type="button" class="btn btn-secondary btn-sm" @click="answerLotPrompt(true)">
+                  Oui, ajouter la place {{ lotPrompt.others.join(', ') }}
+                </button>
+                <button type="button" class="btn btn-link btn-sm" @click="answerLotPrompt(false)">
+                  Non, seulement la {{ lotPrompt.spot }}
+                </button>
+              </div>
+            </div>
+            <span v-if="errors.parking_spot" class="form-error">{{ errors.parking_spot }}</span>
+          </div>
+
+          <div class="form-group" v-if="buildingChoices.length">
             <label class="form-label">
-              Dans quel bâtiment habitez-vous ? <span class="required">*</span>
+              {{ buildingQuestion }} (optionnel)
             </label>
             <div class="radio-group">
               <label
-                v-for="b in buildings"
-                :key="b"
+                v-for="b in buildingChoices"
+                :key="b.id"
                 class="radio-option"
-                :class="{ selected: formData.building === b }"
+                :class="{ selected: formData.building === b.id }"
               >
                 <input
                   type="radio"
                   v-model="formData.building"
-                  :value="b"
+                  :value="b.id"
                   name="building"
                 />
                 <span class="radio-label">
-                  <strong>Bâtiment {{ b }}</strong>
+                  <strong>{{ b.label }}</strong>
+                  <span v-if="b.address">{{ b.address }}</span>
                 </span>
               </label>
             </div>
-            <span v-if="errors.building" class="form-error">{{ errors.building }}</span>
           </div>
 
           <div class="form-group">
@@ -297,20 +573,6 @@ const submitForm = async () => {
               class="form-input"
               placeholder="Ex: 12, A3..."
             />
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="parking_spot">
-              Numéro de place de parking (optionnel)
-            </label>
-            <input
-              type="text"
-              id="parking_spot"
-              v-model="formData.parking_spot"
-              class="form-input"
-              placeholder="Ex: 45, P12..."
-            />
-            <span class="form-hint">Laissez vide si vous n'avez pas de place de parking</span>
           </div>
 
           <div class="form-group">
@@ -494,7 +756,7 @@ const submitForm = async () => {
                 />
                 <span class="radio-label">
                   <strong>Colonne horizontale Enedis</strong>
-                  <span>Compteur individuel, facturation directe</span>
+                  <span>Compteur individuel, contrat avec le fournisseur de votre choix</span>
                 </span>
               </label>
               <label
@@ -508,7 +770,7 @@ const submitForm = async () => {
                   name="preferred_solution"
                 />
                 <span class="radio-label">
-                  <strong>Opérateur externe (Watt, Zeplug...)</strong>
+                  <strong>Opérateur de recharge (ex. Zeplug, izi by EDF…)</strong>
                   <span>Solution clé en main avec abonnement</span>
                 </span>
               </label>
@@ -666,19 +928,25 @@ const submitForm = async () => {
           <div class="rgpd-notice">
             <h4>Protection de vos données (RGPD)</h4>
             <p>
-              <strong>Responsable :</strong> La copropriété (conseil syndical).
-              <strong>Finalité :</strong> Évaluer les besoins en bornes de recharge.
+              <strong>Responsable :</strong>
+              <span v-if="privacy.controller">{{ privacy.controller }}.</span>
+              <span v-else class="privacy-missing">[à compléter].</span>
+              <strong>Finalité :</strong> évaluer les besoins en bornes de recharge et préparer la décision de l'AG.
             </p>
             <p>
-              <strong>Conservation :</strong> Fin du projet + 1 an.
-              <strong>Stockage local :</strong> Un marqueur anti-doublon est enregistré sur votre appareil.
+              <strong>Base légale :</strong> intérêt légitime pour vos réponses ; consentement pour votre e-mail.
+              Vos réponses ne sont pas anonymes (le n° de place se rattache à un lot) et ne sont diffusées que de façon agrégée.
             </p>
             <p>
-              <strong>Vos droits :</strong> Accès, rectification, suppression, portabilité.
-              Contact : <a :href="'mailto:' + contactEmail">{{ contactEmail }}</a>
+              <strong>Conservation :</strong> {{ retentionText }} au plus après votre réponse.
+              <strong>Stockage local :</strong> un marqueur anti-doublon est enregistré sur votre appareil.
             </p>
             <p>
-              <strong>Sécurité :</strong> Données chiffrées, hébergement en France, aucun tiers.
+              <strong>Vos droits :</strong> accès, rectification, suppression, opposition ; retrait du consentement et portabilité pour l'e-mail.
+              Contact : <a :href="'mailto:' + contactEmail">{{ contactEmail }}</a>. Réclamation possible auprès de la CNIL.
+            </p>
+            <p>
+              <strong>Sécurité :</strong> données chiffrées en transit (HTTPS)<span v-if="privacy.host">, hébergeur : {{ privacy.host }}</span>.
               <a href="#" @click.prevent="openPrivacyPolicy" class="privacy-link">Voir la politique complète</a>
             </p>
           </div>
@@ -762,6 +1030,100 @@ const submitForm = async () => {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.lot-prompt {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--color-primary-light);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+}
+
+.lot-prompt p {
+  margin-bottom: 0.5rem;
+}
+
+.lot-prompt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.btn-sm {
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+}
+
+.privacy-missing {
+  color: var(--color-warning);
+  font-style: italic;
+}
+
+.express-card h2 {
+  color: var(--color-primary);
+}
+
+.pill-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pill-option {
+  flex: 1;
+  position: relative;
+  text-align: center;
+  padding: 0.75rem 0.5rem;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-weight: 600;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.pill-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pill-option.selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
+.checkbox-option.compact {
+  margin-top: 0.75rem;
+  padding: 0.625rem 0.875rem;
+}
+
+.form-input:disabled {
+  opacity: 0.5;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  text-decoration: underline;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.success-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+@media (min-width: 480px) {
+  .success-actions {
+    flex-direction: row;
+    justify-content: center;
+  }
 }
 
 .success-card,

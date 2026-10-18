@@ -35,19 +35,19 @@ const faqItems = [
   },
   {
     question: "Puis-je installer une borne seul, sans attendre la copropriété ?",
-    answer: "Oui, c'est le \"droit à la prise\". Tout occupant peut demander l'installation d'une borne à ses frais. Le syndic dispose de 3 mois pour répondre et ne peut refuser que pour des motifs sérieux (impossibilité technique). Cependant, une solution collective est généralement plus avantageuse financièrement."
+    answer: "Oui, c'est le \"droit à la prise\". Tout occupant peut faire installer une borne à ses frais. Il notifie son projet au syndic par lettre recommandée avec accusé de réception, avec un descriptif et un plan. Le syndic ne décide pas : il dispose de 3 mois pour saisir le tribunal judiciaire s'il a un motif sérieux et légitime (impossibilité technique, ou projet collectif voté ou en cours sous 6 mois). S'il ne le fait pas, les travaux peuvent avoir lieu. Ces 3 mois sont donc un délai minimal avant travaux, pas une garantie de rapidité. Un projet collectif en cours peut justifier d'attendre la solution commune."
   },
   {
     question: "Combien coûte l'installation d'une borne ?",
-    answer: "En installation individuelle, comptez 2000 à 4000 euros tout compris. En installation collective avec colonne horizontale Enedis, le coût par place peut descendre à 500-1500 euros grâce aux économies d'échelle et aux aides (ADVENIR, prime Enedis, TVA réduite)."
+    answer: "En installation individuelle, comptez 2000 à 4000 euros tout compris (ordre de grandeur). Avec la colonne horizontale Enedis, chaque utilisateur paie trois postes distincts : la quote-part Enedis (456 à 2 267 € TTC en 2026, versée une fois au raccordement), la dérivation individuelle (ordre de grandeur : environ 310 € TTC si elle est demandée avec les travaux, environ 389 € TTC après) et sa borne, sur devis. La prime ADVENIR peut couvrir 50 % du coût HT de la borne (plafond 1 000 € HT). Consultez la page Financement pour le détail."
   },
   {
     question: "Comment fonctionne la facturation avec une colonne Enedis ?",
-    answer: "Chaque utilisateur dispose de son propre compteur Enedis. Vous payez directement votre consommation électrique à Enedis, comme pour votre logement. La copropriété n'a pas à gérer la facturation entre résidents."
+    answer: "Chaque utilisateur dispose de son propre compteur Linky. Le gestionnaire du réseau (Enedis) pose le compteur mais n'envoie pas de facture de consommation : vous souscrivez un contrat auprès du fournisseur d'électricité de votre choix (EDF, Engie, TotalEnergies...), qui vous facture, comme pour votre logement. La copropriété n'a pas à gérer la facturation entre résidents."
   },
   {
     question: "Quelle puissance choisir pour ma borne ?",
-    answer: "Pour un usage quotidien à domicile, une borne 7,4 kW (monophasé) ou 11 kW (triphasé) est largement suffisante. Elle permet de recharger environ 40-60 km d'autonomie par heure de charge. La recharge complète d'une voiture se fait en une nuit."
+    answer: "Pour un usage quotidien à domicile, une borne 7,4 kW (monophasé) ou 11 kW (triphasé) est largement suffisante. Elle permet de recharger environ 40 à 60 km d'autonomie par heure de charge (ordre de grandeur, selon le véhicule). La recharge complète d'une voiture se fait en une nuit."
   },
   {
     question: "Le réseau électrique de l'immeuble peut-il supporter plusieurs bornes ?",
@@ -55,11 +55,11 @@ const faqItems = [
   },
   {
     question: "Quelles sont les aides financières disponibles ?",
-    answer: "Plusieurs aides sont cumulables : le programme ADVENIR (jusqu'à 50% des coûts), la prime Enedis pour la colonne horizontale, la TVA à 5,5%, et le crédit d'impôt (300 euros). Consultez la page Aides pour plus de détails."
+    answer: "En 2026 : la prime ADVENIR (50 % du coût HT de la borne, plafonnée à 1 000 € HT ; 50 % de l'infrastructure collective, plafonnée à 12 500 € HT jusqu'à 100 places) pour une offre de prime signée avant les travaux, avec un installateur qualifié IRVE. Une TVA réduite est possible sous conditions, à confirmer sur le devis. Consultez la page Financement pour les détails et les sources."
   },
   {
     question: "Faut-il voter en Assemblée Générale ?",
-    answer: "Oui, pour une installation collective, le projet doit être voté en AG. La majorité simple (article 24) suffit généralement. Le vote porte sur le principe de l'installation, le choix de la solution technique et le budget."
+    answer: "Oui, pour une installation collective, le projet doit être voté en AG. La majorité simple (article 24) s'applique à l'équipement des places et à la signature d'une convention sans frais pour la copropriété avec Enedis ou un opérateur. Au moins un devis d'opérateur doit être présenté 2 mois avant l'AG qui vote une convention avec Enedis."
   },
   {
     question: "Je suis locataire, puis-je participer ?",
@@ -67,15 +67,15 @@ const faqItems = [
   },
   {
     question: "Que se passe-t-il si je n'ai pas de véhicule électrique ?",
-    answer: "L'infrastructure sera prête pour le jour où vous en aurez un. Le coût de l'infrastructure commune est réparti entre tous les lots, mais vous ne payez le raccordement individuel que si vous souhaitez utiliser une borne."
+    answer: "L'infrastructure sera prête pour le jour où vous en aurez un. Avec la solution Enedis, vous n'avez rien à payer tant que vous ne vous raccordez pas : seuls les utilisateurs payent leur raccordement et leur borne. Avec une infrastructure collective privée, en revanche, le coût de l'infrastructure commune est réparti entre les copropriétaires selon les tantièmes."
   },
   {
     question: "Combien de temps prend l'installation ?",
-    answer: "De la décision en AG à la mise en service, comptez 6 à 12 mois. Ce délai inclut les études techniques, les démarches administratives, les demandes d'aides et les travaux eux-mêmes."
+    answer: "Comptez en général 12 à 18 mois entre la demande à Enedis et la mise en service, dont environ 6 mois de travaux après la signature de la convention. Ce délai inclut les études techniques, le vote en AG, les démarches administratives et les travaux eux-mêmes."
   },
   {
     question: "Mes données sont-elles protégées ?",
-    answer: "Oui, cette enquête respecte le RGPD. Vos réponses sont anonymes (seul le bâtiment est demandé, pas le numéro de lot). L'email est optionnel et uniquement utilisé si vous souhaitez être informé. Les données sont hébergées en France et ne sont pas transmises à des tiers."
+    answer: "Vos réponses ne sont pas anonymes : le numéro de place permet de les rattacher à un lot. Elles ne sont consultées que par le responsable de l'enquête et ne sont diffusées que sous forme agrégée (nombre de places intéressées, sans nom). L'email est optionnel et uniquement utilisé si vous souhaitez être informé. Le détail figure dans la politique de confidentialité."
   }
 ]
 </script>

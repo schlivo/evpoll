@@ -3,11 +3,12 @@ import bcrypt from 'bcrypt';
 import db, { logAuditEvent, getAuditLog, cleanupOldRecords } from '../db.js';
 import { authLimiter, rgpdLimiter } from '../middleware/rateLimiter.js';
 import { generateToken, requireAuth, revokeToken, getClientIP, validateToken } from '../middleware/auth.js';
+import { TOTAL_LOTS, PARKING_SPOTS, LOTS, PRIVACY, loadParkingPlan } from '../config.js';
+import { extractSpotNumbers, spotsToLots } from '../parking.js';
 
 const router = Router();
 
 // Configuration from environment variables
-const TOTAL_LOTS = parseInt(process.env.TOTAL_LOTS, 10) || 75;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'irve2024';
 
 // Hash the admin password on startup
@@ -70,6 +71,38 @@ router.post('/logout', requireAuth, (req, res) => {
   res.json({ success: true });
 });
 
+/**
+ * Distinct parking spot numbers declared across all responses
+ * @returns {Set<number>}
+ */
+function getDeclaredSpots() {
+  const rows = db.prepare(`
+    SELECT parking_spot FROM responses
+    WHERE parking_spot IS NOT NULL AND parking_spot != ''
+  `).all();
+  return new Set(rows.flatMap(r => extractSpotNumbers(r.parking_spot)));
+}
+
+/** Number of distinct lots covered by the declared spots (null without a lot table) */
+const countDeclaredLots = (spots) =>
+  LOTS.length ? spotsToLots([...spots]).filter(l => l.lot !== null).length : null;
+
+// GET /api/stats/counter - Public campaign counter (no personal data)
+router.get('/counter', (req, res) => {
+  try {
+    const spots = getDeclaredSpots();
+    res.json({
+      declared_spots: spots.size,
+      parking_spots: PARKING_SPOTS,
+      declared_lots: countDeclaredLots(spots),
+      total_lots: LOTS.length ? TOTAL_LOTS : null
+    });
+  } catch (error) {
+    console.error('Counter error:', error);
+    res.status(500).json({ success: false });
+  }
+});
+
 // GET /api/stats - Get aggregated anonymous statistics
 router.get('/', (req, res) => {
   try {
@@ -126,6 +159,18 @@ router.get('/', (req, res) => {
     `);
     const withParking = parkingStmt.get().count;
 
+    const noParkingStmt = db.prepare(`
+      SELECT COUNT(*) as count FROM responses WHERE no_parking = 1
+    `);
+    const noParking = noParkingStmt.get().count;
+
+    const expressStmt = db.prepare(`
+      SELECT COUNT(*) as count FROM responses WHERE express = 1
+    `);
+    const expressCount = expressStmt.get().count;
+
+    const declaredSpots = getDeclaredSpots();
+
     // Count of people with comments
     const commentsStmt = db.prepare(`
       SELECT COUNT(*) as count
@@ -149,7 +194,7 @@ router.get('/', (req, res) => {
       GROUP BY building
     `);
     const byBuilding = Object.fromEntries(
-      buildingStmt.all().map(row => [row.building, row.count])
+      buildingStmt.all().map(row => [row.building || 'non_renseigne', row.count])
     );
 
     // By timeline
@@ -173,6 +218,11 @@ router.get('/', (req, res) => {
       interest: interest,
       preferred_solution: preferredSolution,
       with_parking: withParking,
+      no_parking: noParking,
+      declared_spots: declaredSpots.size,
+      parking_spots: PARKING_SPOTS,
+      declared_lots: countDeclaredLots(declaredSpots),
+      express_responses: expressCount,
       with_comments: withComments,
       with_consent: withConsent,
       timeline: timeline
@@ -211,6 +261,7 @@ export function handleExportCSV(req, res) {
         building,
         apartment,
         parking_spot,
+        no_parking,
         status,
         has_ev,
         interested,
@@ -218,7 +269,8 @@ export function handleExportCSV(req, res) {
         timeline,
         comments,
         email,
-        consent_contact
+        consent_contact,
+        express
       FROM responses
       ORDER BY created_at DESC
     `);
@@ -236,6 +288,7 @@ export function handleExportCSV(req, res) {
       'Bâtiment',
       'Appartement',
       'Place parking',
+      'Pas de place',
       'Statut',
       'Véhicule électrique',
       'Intéressé',
@@ -243,7 +296,8 @@ export function handleExportCSV(req, res) {
       'Horizon',
       'Commentaires',
       'Email',
-      'Consentement contact'
+      'Consentement contact',
+      'Réponse express'
     ];
 
     // Convert to CSV
@@ -268,7 +322,8 @@ export function handleExportCSV(req, res) {
         r.created_at,
         r.building,
         r.apartment,
-        r.parking_spot,
+        escapeCSV(r.parking_spot),
+        r.no_parking ? 'Oui' : 'Non',
         r.status,
         r.has_ev,
         r.interested,
@@ -276,7 +331,8 @@ export function handleExportCSV(req, res) {
         r.timeline,
         escapeCSV(r.comments),
         r.email,
-        r.consent_contact ? 'Oui' : 'Non'
+        r.consent_contact ? 'Oui' : 'Non',
+        r.express ? 'Oui' : 'Non'
       ].join(','))
     ];
 
@@ -325,6 +381,74 @@ router.get('/admin/audit', requireAuth, (req, res) => {
   }
 });
 
+// GET /api/stats/admin/spots - Declared parking spots with interest (for Enedis list)
+router.get('/admin/spots', requireAuth, (req, res) => {
+  const clientIP = getClientIP(req);
+
+  try {
+    const rows = db.prepare(`
+      SELECT id, parking_spot, interested, has_ev, status, created_at
+      FROM responses
+      WHERE parking_spot IS NOT NULL AND parking_spot != ''
+      ORDER BY created_at ASC
+    `).all();
+
+    const bySpot = new Map();
+    const unrecognized = [];
+    for (const row of rows) {
+      const numbers = extractSpotNumbers(row.parking_spot);
+      if (numbers.length === 0) {
+        unrecognized.push({ id: row.id, value: row.parking_spot, interested: row.interested });
+      }
+      for (const spot of numbers) {
+        if (!bySpot.has(spot)) bySpot.set(spot, []);
+        bySpot.get(spot).push({
+          id: row.id,
+          interested: row.interested,
+          has_ev: row.has_ev,
+          status: row.status
+        });
+      }
+    }
+
+    const spots = [...bySpot.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([spot, responses]) => ({ spot, responses }));
+
+    // Lots with at least one "oui" (list for the Enedis quote-part and sizing)
+    const interestedLots = spotsToLots(
+      spots.filter(s => s.responses.some(r => r.interested === 'oui')).map(s => s.spot)
+    ).filter(l => l.lot !== null);
+
+    logAuditEvent('spots_view', clientIP, { spot_count: spots.length });
+
+    res.json({
+      success: true,
+      parking_spots: PARKING_SPOTS,
+      total_lots: TOTAL_LOTS,
+      spots,
+      interested_lots: interestedLots,
+      unrecognized
+    });
+  } catch (error) {
+    console.error('Spots error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de la récupération des places'
+    });
+  }
+});
+
+// GET /api/stats/admin/plan - Parking lots and optional plan coordinates for the admin map
+router.get('/admin/plan', requireAuth, (req, res) => {
+  res.json({
+    success: true,
+    parking_spots: PARKING_SPOTS,
+    lots: LOTS,
+    plan: loadParkingPlan()
+  });
+});
+
 // GET /api/stats/admin/duplicates - View potential duplicate submissions
 router.get('/admin/duplicates', requireAuth, (req, res) => {
   const clientIP = getClientIP(req);
@@ -370,7 +494,7 @@ router.get('/admin/duplicates', requireAuth, (req, res) => {
 // DELETE /api/stats/admin/cleanup - Manual cleanup trigger
 router.delete('/admin/cleanup', requireAuth, (req, res) => {
   const clientIP = getClientIP(req);
-  const retentionDays = parseInt(req.query.days) || 730;
+  const retentionDays = parseInt(req.query.days) || PRIVACY.retention_days;
 
   try {
     const deletedCount = cleanupOldRecords(retentionDays);

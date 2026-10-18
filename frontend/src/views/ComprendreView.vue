@@ -29,7 +29,7 @@ import SvgIcon from '../components/SvgIcon.vue'
             <ul>
               <li>Recharge lente (8-12h pour une charge complète)</li>
               <li>Installation simple</li>
-              <li>Coût : 500-800 euros</li>
+              <li>Coût : 500-800 euros (ordre de grandeur)</li>
               <li>Idéal pour un usage quotidien domicile</li>
             </ul>
           </div>
@@ -40,7 +40,7 @@ import SvgIcon from '../components/SvgIcon.vue'
             <ul>
               <li>Recharge normale à accélérée (2-6h)</li>
               <li>Fonctionnalités avancées (programmation, suivi)</li>
-              <li>Coût : 1000-2500 euros installée</li>
+              <li>Coût : 1000-2500 euros installée (ordre de grandeur)</li>
               <li>Solution recommandée en copropriété</li>
             </ul>
           </div>
@@ -51,25 +51,46 @@ import SvgIcon from '../components/SvgIcon.vue'
         <h2>Le contexte réglementaire</h2>
 
         <div class="regulation-card">
-          <h3>Loi Climat et Résilience (2021)</h3>
+          <h3>Ce que prévoit la loi pour une copropriété existante</h3>
+          <ul class="regulation-list">
+            <li>
+              <strong>Droit à la prise :</strong> tout occupant peut faire installer,
+              à ses frais, une recharge sur sa place (voir ci-dessous).
+            </li>
+            <li>
+              <strong>Vote en AG à la majorité simple (article 24)</strong> pour l'équipement
+              des places et pour une convention sans frais pour la copropriété avec Enedis
+              ou un opérateur.
+            </li>
+            <li>
+              <strong>Devis d'opérateur obligatoire :</strong> au moins un devis d'opérateur
+              doit être présenté 2 mois avant l'AG qui vote une convention avec Enedis
+              (décret n° 2022-1249).
+            </li>
+          </ul>
           <p>
-            Depuis 2021, les copropriétés doivent pré-équiper les parkings
-            lors de travaux importants. D'ici 2025, tous les parkings de plus
-            de 20 places devront disposer d'un pré-équipement.
+            L'obligation de pré-équipement des parkings concerne les bâtiments résidentiels
+            neufs et ceux qui font l'objet d'une rénovation importante, pas les copropriétés
+            existantes en dehors de ces cas.
           </p>
         </div>
 
         <div class="regulation-card">
           <h3>Le droit à la prise</h3>
           <p>
-            Tout occupant (propriétaire ou locataire) peut demander
-            l'installation d'une borne de recharge à ses frais.
-            Le syndic ne peut s'y opposer que pour des motifs sérieux
-            et légitimes (impossibilité technique, par exemple).
+            Tout occupant (propriétaire ou locataire) peut faire installer
+            une borne de recharge à ses frais. Il notifie son projet au syndic
+            par lettre recommandée avec accusé de réception, avec un descriptif et un plan.
           </p>
           <p>
-            <strong>Délai :</strong> Le syndic dispose de 3 mois pour
-            notifier sa décision à partir de la demande.
+            <strong>Délai :</strong> le syndic ne décide pas. Il dispose de 3 mois pour saisir
+            le tribunal judiciaire s'il a un motif sérieux et légitime : impossibilité technique,
+            ou projet collectif voté ou en cours (sous 6 mois). S'il ne saisit pas le tribunal,
+            les travaux peuvent avoir lieu. Ces 3 mois sont donc un délai minimal avant travaux,
+            pas une garantie de rapidité.
+          </p>
+          <p>
+            Un projet collectif en cours peut justifier d'attendre la solution commune.
           </p>
         </div>
 
@@ -77,8 +98,7 @@ import SvgIcon from '../components/SvgIcon.vue'
           <h3>Vote en Assemblée Générale</h3>
           <p>
             Pour une installation collective, le vote se fait à la
-            <strong>majorité simple</strong> (article 24) si le projet
-            n'affecte pas les parties communes de manière significative.
+            <strong>majorité simple</strong> (article 24).
           </p>
         </div>
       </section>
@@ -115,8 +135,9 @@ import SvgIcon from '../components/SvgIcon.vue'
             </div>
             <h4>Aides financières</h4>
             <p>
-              Les dispositifs d'aide (ADVENIR, Enedis) sont plus
-              avantageux pour les installations collectives.
+              Le programme ADVENIR finance aussi l'infrastructure collective,
+              et Enedis peut la préfinancer : ces dispositifs sont pensés
+              pour les installations collectives.
             </p>
           </div>
 
@@ -139,17 +160,17 @@ import SvgIcon from '../components/SvgIcon.vue'
         <div class="stats-highlight">
           <div class="stat-item">
             <div class="stat-number">2035</div>
-            <div class="stat-text">Fin de vente des véhicules thermiques neufs en Europe</div>
+            <div class="stat-text">Objectif européen 2035 : quasi-totalité des ventes neuves en électrique (règle en cours de révision)</div>
           </div>
           <div class="stat-item">
-            <div class="stat-number">90%</div>
-            <div class="stat-text">Des recharges se font à domicile ou au travail</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-number">+47%</div>
-            <div class="stat-text">De véhicules électriques immatriculés en 2023</div>
+            <div class="stat-number">41,1 %</div>
+            <div class="stat-text">Des voitures neuves vendues en France en septembre 2026 étaient électriques (31 % sur neuf mois)</div>
           </div>
         </div>
+        <p class="stats-source">
+          Source :
+          <a href="https://www.connaissancedesenergies.org/afp/train-bus-covoiturage-les-solutions-face-a-la-hantise-de-la-pompe-a-essence-261006" target="_blank" rel="noopener">AFP / Connaissance des Énergies, 06/10/2026</a>
+        </p>
       </section>
 
     </div>
@@ -281,8 +302,22 @@ import SvgIcon from '../components/SvgIcon.vue'
 
 @media (min-width: 640px) {
   .stats-highlight {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
   }
+}
+
+.stats-source {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.regulation-list {
+  margin: 0 0 0.75rem 1.25rem;
+  color: var(--color-text-light);
+}
+
+.regulation-list li {
+  margin-bottom: 0.5rem;
 }
 
 .stat-item {

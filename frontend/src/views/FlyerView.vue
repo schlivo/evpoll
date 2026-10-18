@@ -157,9 +157,10 @@ const printFlyer = () => {
         <!-- Stats -->
         <div class="stats-section">
           <p class="stats-text">
-            <strong>80 % des copropriétaires</strong> qui installent des IRVE regrettent de ne pas l'avoir fait plus tôt <em>(selon sondages)</em>...
+            Le gazole à plus de 2 € ? L'électrique coûte <strong>2 à 3 fois moins cher</strong>… si l'on peut recharger chez soi
+            <em>(AFP / Connaissance des Énergies, 06/10/2026)</em>.
           </p>
-          <p class="stats-question">Et vous ?</p>
+          <p class="stats-question">Indiquez votre n° de place en 30 secondes</p>
         </div>
 
         <!-- Icons row -->
@@ -180,7 +181,7 @@ const printFlyer = () => {
 
         <!-- Highlight box -->
         <div class="highlight-box">
-          <p>Valorisez VOTRE bien immobilier dès maintenant</p>
+          <p>Sans coût pour la copropriété avec l'infrastructure préfinancée par Enedis</p>
         </div>
 
         <!-- Content row -->
@@ -188,7 +189,7 @@ const printFlyer = () => {
           <div class="benefits-section">
             <div class="benefit-item">
               <span class="bullet">+</span>
-              <p class="benefit-text"><strong>+3 à +5 % de valeur ajoutée</strong> estimée pour votre appartement grâce à une copropriété équipée – un atout majeur à la revente ou location.</p>
+              <p class="benefit-text"><strong>Se déclarer avant les travaux</strong> : raccordement de votre place moins cher qu'après.</p>
             </div>
             <div class="benefit-item">
               <span class="bullet">•</span>
@@ -196,7 +197,7 @@ const printFlyer = () => {
             </div>
             <div class="benefit-item">
               <span class="bullet">•</span>
-              <p class="benefit-text"><strong>Primes & aides</strong> jusqu'à 50-70 % (programme Advenir, crédit d'impôt, TVA réduite, aides locales).</p>
+              <p class="benefit-text"><strong>Prime ADVENIR</strong> : une partie du raccordement et de la borne est couverte (voir la page Financement).</p>
             </div>
             <div class="benefit-item">
               <span class="bullet">•</span>

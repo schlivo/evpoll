@@ -192,6 +192,28 @@ CORS_ORIGIN=http://localhost:5173
 | `BUILDINGS` | Non | Liste des bâtiments séparés par virgule |
 | `TOTAL_LOTS` | Non | Nombre total de lots (pour calcul participation) |
 | `CONTACT_EMAIL` | Non | Email du conseil syndical |
+| `INSTANCE_DIR` | Non | Dossier de l'instance (voir ci-dessous) |
+| `PARKING_SPOTS` | Non | Nombre de places (numérotées 1..N) si pas d'instance |
+| `DATA_CONTROLLER` | Non | Responsable du traitement affiché dans la notice RGPD |
+| `RETENTION_DAYS` | Non | Conservation des réponses en jours (défaut 730), affichée dans la notice |
+| `AUDIT_RETENTION_DAYS` | Non | Conservation du journal de sécurité (IP) en jours (défaut 365) |
+
+### Socle commun et instance
+
+Le code de ce dépôt (public) est **générique**. Tout ce qui est propre à une copropriété vit dans un
+**dossier d'instance**, hors de ce dépôt (dépôt privé conseillé), désigné par `INSTANCE_DIR` :
+
+```
+<instance>/
+├── instance.json        nom, adresses, escaliers/bâtiments, lots et places (lots doubles),
+│                        campagne (date limite, signature), paramètres de la notice RGPD,
+│                        textes courts (pied de page)
+├── plan/parking.json    (optionnel) coordonnées des places pour le plan de l'admin
+└── docs/                (optionnel) briefs, revues, non servis par l'application
+```
+
+Modèle complet : [`instances/demo/`](instances/demo/). Les secrets (`ADMIN_PASSWORD`, e-mails)
+restent dans l'environnement. Une variable d'environnement définie l'emporte sur la valeur de l'instance.
 
 ---
 

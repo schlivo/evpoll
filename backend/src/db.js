@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { PRIVACY } from './config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -69,6 +70,9 @@ addColumnIfNotExists('responses', 'ip_address', 'TEXT');
 addColumnIfNotExists('responses', 'user_agent', 'TEXT');
 addColumnIfNotExists('responses', 'submission_hash', 'TEXT');
 addColumnIfNotExists('responses', 'consent_timestamp', 'TEXT');
+addColumnIfNotExists('responses', 'no_parking', 'INTEGER DEFAULT 0');
+addColumnIfNotExists('responses', 'express', 'INTEGER DEFAULT 0');
+addColumnIfNotExists('responses', 'edit_token_hash', 'TEXT');
 
 // Create indexes for duplicate detection and performance
 db.exec(`
@@ -142,10 +146,26 @@ export function cleanupOldRecords(retentionDays = 730) { // 2 years default
   return countResult.count;
 }
 
+/**
+ * Delete audit log entries (they contain IP addresses) older than the retention period
+ * @param {number} retentionDays - Number of days to retain audit entries
+ * @returns {number} - Number of entries deleted
+ */
+export function cleanupAuditLog(retentionDays = PRIVACY.audit_retention_days) {
+  const result = db.prepare(`
+    DELETE FROM audit_log WHERE timestamp < datetime('now', ?)
+  `).run(`-${retentionDays} days`);
+  return result.changes;
+}
+
 // Run cleanup on startup and schedule daily
 if (process.env.NODE_ENV !== 'test') {
-  cleanupOldRecords();
-  setInterval(() => cleanupOldRecords(), 24 * 60 * 60 * 1000); // Daily
+  const runCleanup = () => {
+    cleanupOldRecords(PRIVACY.retention_days);
+    cleanupAuditLog();
+  };
+  runCleanup();
+  setInterval(runCleanup, 24 * 60 * 60 * 1000); // Daily
 }
 
 export default db;

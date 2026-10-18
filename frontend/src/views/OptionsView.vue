@@ -17,11 +17,12 @@ const options = [
     pros: [
       'Liberté totale sur le choix de l\'équipement',
       'Pas de dépendance vis-à-vis de la copropriété',
-      'Installation rapide (3 mois max après demande)'
+      'Pas de vote en AG : le syndic ne peut s\'y opposer qu\'en saisissant le tribunal sous 3 mois (délai minimal avant travaux)'
     ],
     cons: [
       'Coût plus élevé par installation',
       'Chaque résident doit faire sa propre démarche',
+      'Un projet collectif voté ou en cours peut justifier de reporter l\'installation',
       'Risque de saturation électrique si beaucoup de demandes',
       'Pas d\'économies d\'échelle'
     ]
@@ -29,7 +30,7 @@ const options = [
   {
     id: 'operateur',
     name: 'Opérateur externe',
-    subtitle: 'Type Watt, Zeplug...',
+    subtitle: 'Opérateur de recharge (ex. Zeplug, izi by EDF...)',
     cost: '0 euros + abonnement',
     costType: 'subscription',
     autonomy: 2,
@@ -41,7 +42,7 @@ const options = [
       'Solution clé en main'
     ],
     cons: [
-      'Abonnement mensuel (souvent 20-40 euros/mois)',
+      'Abonnement mensuel (ordre de grandeur : 20-40 euros/mois)',
       'Dépendance à l\'opérateur sur le long terme',
       'Conditions contractuelles parfois contraignantes',
       'Moins de flexibilité sur les tarifs'
@@ -51,23 +52,24 @@ const options = [
     id: 'enedis',
     name: 'Colonne horizontale Enedis',
     subtitle: 'Solution recommandée',
-    cost: 'Faible à nul pour la copropriété',
+    cost: 'Infrastructure sans coût pour la copropriété (hors frais annexes)',
     costType: 'one-time',
     autonomy: 4,
     evolution: 5,
     complexity: 2,
     recommended: true,
     pros: [
-      'Coût quasi-nul pour la copropriété grâce au refinancement Enedis',
+      'Infrastructure préfinancée par Enedis : pas d\'investissement pour la copropriété',
       'Chaque résident a son propre compteur Linky dédié',
-      'Facturation individuelle directe par Enedis (comme votre logement)',
+      'Contrat d\'électricité avec le fournisseur de votre choix, via un compteur Linky dédié',
       'Le prestataire se finance sur la vente et l\'installation des bornes',
-      'Infrastructure mutualisée, évolutive à l\'infini',
+      'Infrastructure mutualisée, dimensionnée pour équiper toutes les places',
       'Plus il y a d\'intéressés, plus le projet est attractif pour les opérateurs'
     ],
     cons: [
-      'Nécessite un vote en AG',
-      'Délai de mise en oeuvre (6-12 mois)',
+      'Nécessite un vote en AG (majorité simple) pour signer la convention',
+      'Délai : en général 12 à 18 mois entre la demande à Enedis et la mise en service, dont environ 6 mois de travaux après la signature de la convention',
+      'Frais annexes éventuels (honoraires de suivi, adaptation du local électrique), chiffrés avant l\'AG',
       'Travaux dans les parties communes'
     ]
   },
@@ -172,7 +174,8 @@ const getRatingBars = (value, max = 5) => {
         <p class="table-legend">
           <strong>Autonomie</strong> = indépendance vis-à-vis d'un tiers |
           <strong>Évolutivité</strong> = facilité d'ajouter des bornes |
-          <strong>Complexité</strong> = difficulté de mise en oeuvre
+          <strong>Complexité</strong> = difficulté de mise en oeuvre<br>
+          Les coûts indiqués sont des ordres de grandeur, hors aides.
         </p>
       </section>
 
@@ -271,9 +274,10 @@ const getRatingBars = (value, max = 5) => {
             </div>
             <h4>Coût pour la copropriété</h4>
             <p>
-              Grâce au refinancement Enedis et aux aides (ADVENIR, prime colonne), le coût résiduel
-              pour la copropriété est <strong>souvent proche de zéro</strong>. Seuls les utilisateurs
-              effectifs payent leur borne et leur électricité.
+              L'infrastructure étant préfinancée par Enedis, elle ne coûte rien à la copropriété.
+              D'éventuels frais annexes (honoraires de suivi, adaptation du local électrique) seront
+              <strong>chiffrés avant l'AG</strong>. Seuls les utilisateurs effectifs payent leur
+              raccordement, leur borne et leur électricité.
             </p>
           </div>
         </div>
@@ -286,11 +290,12 @@ const getRatingBars = (value, max = 5) => {
             <SvgIcon name="chart-up" :size="40" />
           </div>
           <div class="importance-content">
-            <h3>Plus on est nombreux, plus le projet avance !</h3>
+            <h3>Des chiffres réels pour préparer l'AG</h3>
             <p>
-              Les opérateurs et installateurs évaluent la <strong>viabilité économique</strong> d'un projet
-              en fonction du nombre de résidents intéressés. Un parking avec 20 personnes motivées
-              sera beaucoup plus attractif qu'un projet avec seulement 3 ou 4 demandes isolées.
+              Vos réponses servent à dimensionner le projet, à le présenter en AG avec des chiffres
+              réels et à obtenir de meilleures offres des opérateurs. Les opérateurs et installateurs
+              évaluent en effet la <strong>viabilité économique</strong> d'un projet en fonction du
+              nombre de résidents intéressés.
             </p>
             <div class="importance-benefits">
               <div class="benefit">
@@ -298,8 +303,8 @@ const getRatingBars = (value, max = 5) => {
                 <span>Économies d'échelle sur l'installation</span>
               </div>
               <div class="benefit">
-                <strong>Priorité des opérateurs</strong>
-                <span>Les projets viables sont traités en premier</span>
+                <strong>Projet bien dimensionné</strong>
+                <span>Le nombre de places à équiper est connu dès le départ</span>
               </div>
               <div class="benefit">
                 <strong>Négociation facilitée</strong>
@@ -308,7 +313,7 @@ const getRatingBars = (value, max = 5) => {
             </div>
             <p class="importance-note">
               Même si vous n'avez pas encore de véhicule électrique, indiquer votre intérêt
-              renforce le dossier et prépare l'avenir !
+              renforce le dossier présenté en AG.
             </p>
           </div>
         </div>

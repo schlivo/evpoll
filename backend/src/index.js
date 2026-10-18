@@ -8,6 +8,7 @@ import { dirname, join } from 'path';
 import surveyRouter from './routes/survey.js';
 import statsRouter, { handleExportCSV } from './routes/stats.js';
 import { globalLimiter } from './middleware/rateLimiter.js';
+import { COPRO, BUILDINGS, BUILDINGS_QUESTION, PARKING_SPOTS, LOTS, CAMPAIGN, PRIVACY, TEXTS } from './config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -68,15 +69,29 @@ app.get('/api/health', (req, res) => {
 
 // Public config endpoint (non-sensitive configuration for frontend)
 app.get('/api/config', (req, res) => {
-  const COPRO_NAME = process.env.COPRO_NAME || 'Ma Copropriété';
-  const BUILDINGS = (process.env.BUILDINGS || 'A,B,C,D').split(',').map(b => b.trim());
   const CONTACT_EMAIL = process.env.CONTACT_EMAIL || 'conseil-syndical@exemple.fr';
   const SYNDIC_EMAIL = process.env.SYNDIC_EMAIL || 'syndic@exemple.fr';
   res.json({
-    copro_name: COPRO_NAME,
-    buildings: BUILDINGS,
+    copro_name: COPRO.name,
+    copro_address: COPRO.address,
+    parking_address: COPRO.parking_address,
+    // Kept as a list of ids for older frontends; details in building_choices
+    buildings: BUILDINGS.map(b => b.id),
+    building_question: BUILDINGS_QUESTION.label,
+    building_choices: [
+      ...BUILDINGS.map(b => ({ id: b.id, label: b.label, address: b.address })),
+      ...BUILDINGS_QUESTION.extra_choices
+    ],
+    parking_spots: PARKING_SPOTS,
+    // Only multi-spot lots: lets the form ask "are both spots concerned?"
+    multi_spot_lots: LOTS.filter(l => l.places.length > 1),
     contact_email: CONTACT_EMAIL,
-    syndic_email: SYNDIC_EMAIL
+    syndic_email: SYNDIC_EMAIL,
+    privacy: PRIVACY,
+    texts: TEXTS,
+    // Campaign defaults for the flyer generator (editable there)
+    campaign_deadline: CAMPAIGN.deadline,
+    campaign_signature: CAMPAIGN.signature
   });
 });
 

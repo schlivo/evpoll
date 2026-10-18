@@ -1,0 +1,233 @@
+{
+  "_comment": "Instance d'exemple (démo). Copiez ce dossier hors du dépôt public pour une vraie copropriété, puis pointez INSTANCE_DIR dessus.",
+  "copro": {
+    "name": "Résidence Démo",
+    "address": "1 rue de l'Exemple, 75000 Paris",
+    "parking_address": "1 rue de l'Exemple (entrée véhicules)"
+  },
+  "buildings": [
+    {
+      "id": "A",
+      "label": "Escalier A",
+      "adresse": null
+    },
+    {
+      "id": "B",
+      "label": "Escalier B",
+      "adresse": null
+    }
+  ],
+  "buildings_question": {
+    "label": "Votre escalier",
+    "extra_choices": [
+      {
+        "id": "ne_sait_pas",
+        "label": "Je ne sais pas"
+      },
+      {
+        "id": "non_resident",
+        "label": "Je n'habite pas la résidence (propriétaire bailleur)"
+      }
+    ]
+  },
+  "parking": {
+    "total_lots": 25,
+    "total_places": 30,
+    "lots": [
+      {
+        "lot": 100,
+        "places": [
+          1,
+          2
+        ],
+        "type": "double"
+      },
+      {
+        "lot": 101,
+        "places": [
+          3,
+          4
+        ],
+        "type": "double"
+      },
+      {
+        "lot": 102,
+        "places": [
+          5,
+          6
+        ],
+        "type": "double"
+      },
+      {
+        "lot": 103,
+        "places": [
+          7,
+          8
+        ],
+        "type": "double"
+      },
+      {
+        "lot": 104,
+        "places": [
+          9,
+          10
+        ],
+        "type": "double"
+      },
+      {
+        "lot": 105,
+        "places": [
+          11
+        ],
+        "type": "simple"
+      },
+      {
+        "lot": 106,
+        "places": [
+          12
+        ],
+        "type": "simple"
+      },
+      {
+        "lot": 107,
+        "places": [
+          13
+        ],
+        "type": "simple"
+      },
+      {
+        "lot": 108,
+        "places": [
+          14
+        ],
+        "type": "simple"
+      },
+      {
+        "lot": 109,
+        "places": [
+          15
+        ],
+        "type": "simple"
+      },
+      {
+        "lot": 110,
+        "places": [
+          16
+        ],
+        "type": "simple"
+      },
+      {
+        "lot": 111,
+        "places": [
+          17
+        ],
+        "type": "simple"
+      },
+      {
+        "lot": 112,
+        "places": [
+          18
+        ],
+        "type": "simple"
+      },
+      {
+        "lot": 113,
+        "places": [
+          19
+        ],
+        "type": "simple"
+      },
+      {
+        "lot": 114,
+        "places": [
+          20
+        ],
+        "type": "simple"
+      },
+      {
+        "lot": 115,
+        "places": [
+          21
+        ],
+        "type": "simple"
+      },
+      {
+        "lot": 116,
+        "places": [
+          22
+        ],
+        "type": "simple"
+      },
+      {
+        "lot": 117,
+        "places": [
+          23
+        ],
+        "type": "simple"
+      },
+      {
+        "lot": 118,
+        "places": [
+          24
+        ],
+        "type": "simple"
+      },
+      {
+        "lot": 119,
+        "places": [
+          25
+        ],
+        "type": "simple"
+      },
+      {
+        "lot": 120,
+        "places": [
+          26
+        ],
+        "type": "simple"
+      },
+      {
+        "lot": 121,
+        "places": [
+          27
+        ],
+        "type": "simple"
+      },
+      {
+        "lot": 122,
+        "places": [
+          28
+        ],
+        "type": "simple"
+      },
+      {
+        "lot": 123,
+        "places": [
+          29
+        ],
+        "type": "simple"
+      },
+      {
+        "lot": 124,
+        "places": [
+          30
+        ],
+        "type": "simple"
+      }
+    ]
+  },
+  "campaign": {
+    "deadline": "",
+    "signature": "Le conseil syndical"
+  },
+  "privacy": {
+    "controller": "",
+    "host": "",
+    "retention_days": 730,
+    "audit_retention_days": 365,
+    "last_updated": "octobre 2026"
+  },
+  "texts": {
+    "footer": "Site d'information réalisé pour les résidents de la Résidence Démo"
+  }
+}

@@ -8,8 +8,9 @@ import SvgIcon from '../components/SvgIcon.vue'
       <header class="page-header">
         <h1>Comment ça se finance ?</h1>
         <p>
-          Avec la solution colonne horizontale Enedis, le coût pour la copropriété
-          est nul. Seuls les utilisateurs payent, et ils bénéficient d'aides.
+          Avec l'infrastructure collective préfinancée par Enedis, la copropriété
+          n'investit pas dans l'infrastructure. Seuls les utilisateurs payent leur raccordement et leur borne,
+          et ils peuvent bénéficier d'aides.
         </p>
       </header>
 
@@ -23,7 +24,12 @@ import SvgIcon from '../components/SvgIcon.vue'
             <p>
               Enedis installe la <strong>colonne horizontale</strong> (le câblage principal
               dans le parking) sans aucun investissement de la copropriété.
-              Pas de vote de budget en AG, pas d'avance de trésorerie.
+              Pas d'investissement pour la copropriété, mais un vote en AG (majorité simple)
+              pour signer la convention avec Enedis.
+            </p>
+            <p>
+              D'éventuels frais annexes (honoraires de suivi, adaptation du local électrique)
+              seront chiffrés avant l'AG.
             </p>
             <p>
               Chaque copropriétaire qui souhaite une borne obtient son propre
@@ -41,29 +47,49 @@ import SvgIcon from '../components/SvgIcon.vue'
           <div class="cost-card">
             <div class="cost-header">
               <span class="cost-label">Quote-part Enedis</span>
-              <span class="cost-amount">440 à 2 200 euros</span>
+              <span class="cost-amount">456 à 2 267 € TTC</span>
             </div>
             <div class="cost-content">
               <p>
-                Participation au remboursement de l'infrastructure sur 20 ans.
-                Le montant dépend de la distance de votre place au point de raccordement.
+                Contribution au préfinancement de l'infrastructure, encadrée par Enedis
+                (plancher et plafond 2026), <strong>versée une fois</strong>, au raccordement.
+                Le montant dépend du coût du projet et de la puissance demandée pour la place.
+                La convention entre la copropriété et Enedis est conclue pour 20 ans.
               </p>
               <div class="cost-highlight">
-                <strong>Avantage premiers demandeurs :</strong> le coût est plus
-                avantageux si vous vous raccordez dès l'installation de la colonne.
+                <strong>Se déclarer tôt :</strong> la prime ADVENIR peut réduire cette quote-part
+                si la dérivation individuelle est demandée dès la création de l'infrastructure.
               </div>
             </div>
           </div>
 
           <div class="cost-card">
             <div class="cost-header">
-              <span class="cost-label">Borne de recharge</span>
-              <span class="cost-amount">800 à 1 500 euros</span>
+              <span class="cost-label">Dérivation individuelle</span>
+              <span class="cost-amount">~310 € TTC</span>
             </div>
             <div class="cost-content">
               <p>
-                Achat et installation de votre borne individuelle (7 kW typiquement).
-                Vous êtes propriétaire de votre équipement.
+                Câble entre l'infrastructure et votre place, et compteur Linky.
+                Ordre de grandeur selon le barème Enedis 2025 : environ 310 € TTC si elle est demandée
+                avec les travaux, environ 389 € TTC si elle est demandée après.
+              </p>
+              <p>
+                Ce frais est distinct de la quote-part : les deux s'additionnent.
+              </p>
+            </div>
+          </div>
+
+          <div class="cost-card">
+            <div class="cost-header">
+              <span class="cost-label">Borne de recharge</span>
+              <span class="cost-amount">Sur devis</span>
+            </div>
+            <div class="cost-content">
+              <p>
+                Achat et pose de votre borne individuelle (7 kW typiquement) par un installateur
+                qualifié IRVE. Vous êtes propriétaire de votre équipement.
+                Le prix varie selon le matériel et l'installateur.
               </p>
             </div>
           </div>
@@ -75,61 +101,75 @@ import SvgIcon from '../components/SvgIcon.vue'
 
         <div class="aids-grid">
           <div class="aid-card featured">
-            <div class="aid-badge">Jusqu'à 600 euros</div>
-            <h3>Prime ADVENIR</h3>
+            <div class="aid-badge">Jusqu'à 1 000 € HT</div>
+            <h3>Prime ADVENIR : borne individuelle</h3>
             <p>
-              Le programme ADVENIR finance <strong>50% du coût de votre borne</strong>,
-              plafonné à 600 euros HT. L'installateur déduit directement la prime du devis.
+              Le programme ADVENIR finance <strong>50 % du coût HT de votre borne</strong>,
+              plafonné à 1 000 € HT par point individuel depuis le 1<sup>er</sup> avril 2026.
+              L'installateur déduit généralement la prime du devis.
             </p>
             <ul>
               <li>Installateur qualifié IRVE et partenaire ADVENIR</li>
-              <li>Borne ≤ 22 kW</li>
-              <li>Programme valable jusqu'en 2027</li>
+              <li>Offre de prime signée <strong>avant</strong> les travaux</li>
+              <li>Programme prévu jusqu'au 31 décembre 2027</li>
             </ul>
           </div>
 
           <div class="aid-card">
-            <div class="aid-badge secondary">5,5%</div>
-            <h3>TVA réduite</h3>
+            <div class="aid-badge secondary">Jusqu'à 12 500 € HT</div>
+            <h3>Prime ADVENIR : infrastructure collective</h3>
             <p>
-              Taux de TVA à 5,5% au lieu de 20% sur l'installation
-              (logement de plus de 2 ans).
+              Pour les travaux en parties communes : 50 % du coût HT, plafonné à 12 500 € HT
+              jusqu'à 100 places, si l'assemblée générale vote à partir du 1<sup>er</sup> avril 2026.
             </p>
           </div>
+
+          <div class="aid-card">
+            <div class="aid-badge secondary">Selon devis</div>
+            <h3>TVA réduite</h3>
+            <p>
+              TVA réduite possible sur la fourniture et la pose d'une borne,
+              <strong>sous conditions, à confirmer sur le devis</strong>.
+            </p>
+          </div>
+
         </div>
       </section>
 
       <section class="example-section">
-        <h2>Exemple concret</h2>
+        <h2>Exemple : les postes de coût</h2>
         <div class="example-card">
           <p class="example-intro">
-            Pour un copropriétaire qui se raccorde dès l'installation de la colonne :
+            Pour un copropriétaire qui se déclare avant les travaux, avec une borne
+            à 1 200 € HT (hypothèse de calcul, à remplacer par votre devis). Chaque ligne est
+            un ordre de grandeur ; ce tableau ne constitue pas un prix.
           </p>
           <div class="example-table">
             <div class="example-row">
-              <span>Quote-part Enedis (estimation basse)</span>
-              <span class="amount">500 euros</span>
+              <span>Quote-part Enedis (ordre de grandeur, 2026)</span>
+              <span class="amount">456 à 2 267 € TTC</span>
             </div>
             <div class="example-row">
-              <span>Borne 7 kW + installation</span>
-              <span class="amount">1 200 euros HT</span>
+              <span>Dérivation individuelle avec les travaux (ordre de grandeur)</span>
+              <span class="amount">~310 € TTC</span>
+            </div>
+            <div class="example-row">
+              <span>Borne 7 kW + pose (hypothèse, ordre de grandeur)</span>
+              <span class="amount">~1 200 € HT</span>
+            </div>
+            <div class="example-row">
+              <span>TVA sur la borne</span>
+              <span class="amount">Selon devis</span>
             </div>
             <div class="example-row aid">
-              <span>Prime ADVENIR (50%)</span>
-              <span class="amount">- 600 euros</span>
-            </div>
-            <div class="example-row">
-              <span>TVA 5,5%</span>
-              <span class="amount">+ 60 euros</span>
-            </div>
-            <div class="example-row total">
-              <span>Coût total estimé</span>
-              <span class="amount">~1 160 euros</span>
+              <span>Prime ADVENIR (50 % du HT éligible, plafond 1 000 €, ordre de grandeur)</span>
+              <span class="amount">~ - 600 €</span>
             </div>
           </div>
           <p class="example-note">
-            * Estimation indicative. Le montant exact de la quote-part Enedis
-            dépend de la configuration du parking.
+            * Ordres de grandeur, hors coffret ou attestation de conformité éventuels.
+            La quote-part réelle dépend du projet ; elle peut être réduite par ADVENIR.
+            Seul le devis fait foi.
           </p>
         </div>
       </section>
@@ -142,12 +182,12 @@ import SvgIcon from '../components/SvgIcon.vue'
             </div>
           <div class="why-content">
             <p>
-              <strong>Plus on est nombreux intéressés, plus le projet avance vite.</strong>
+              <strong>Des chiffres réels pour décider en AG.</strong>
             </p>
             <p>
-              Enedis et les installateurs priorisent les copropriétés avec un nombre
-              suffisant de demandeurs. Même si vous n'avez pas encore de véhicule électrique,
-              votre intérêt compte pour déclencher le projet.
+              Vos réponses servent à dimensionner le projet, à le présenter en AG avec des chiffres
+              réels et à obtenir de meilleures offres des opérateurs. Même si vous n'avez pas encore
+              de véhicule électrique, votre intérêt compte.
             </p>
           </div>
         </div>
@@ -169,10 +209,35 @@ import SvgIcon from '../components/SvgIcon.vue'
             <span class="source-favicon source-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
             </span>
-            <a href="https://www.electro-mob.com/borne-recharge-copropriete-colonne-horizontale-enedis" target="_blank" rel="noopener">
+            <a href="https://www.isiohm.fr/prime-advenir" target="_blank" rel="noopener">
+              Isiohm : barèmes ADVENIR avril 2026
+            </a>
+            <span class="source-desc">Plafonds borne individuelle et infrastructure collective</span>
+          </li>
+          <li>
+            <span class="source-favicon source-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </span>
+            <a href="https://www.electro-mob.com/colonne-horizontale-enedis-borne-recharge" target="_blank" rel="noopener">
               Electro-Mob
             </a>
-            <span class="source-desc">Explication détaillée du dispositif</span>
+            <span class="source-desc">Colonne horizontale Enedis et quote-part 2026</span>
+          </li>
+          <li>
+            <span class="source-favicon source-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </span>
+            <a href="https://isiohm.fr/aides/" target="_blank" rel="noopener">
+              Isiohm : aides 2026
+            </a>
+            <span class="source-desc">Aides en vigueur en 2026</span>
+          </li>
+          <li>
+            <SvgIcon name="enedis" :size="20" class="source-favicon enedis-logo" />
+            <a href="https://www.enedis.fr/reseau-electrique-auto-prefinancement" target="_blank" rel="noopener">
+              Enedis : préfinancement
+            </a>
+            <span class="source-desc">Quote-part 2026 et dérivation individuelle (barème 2025)</span>
           </li>
           <li>
             <SvgIcon name="enedis" :size="20" class="source-favicon enedis-logo" />
@@ -248,7 +313,7 @@ import SvgIcon from '../components/SvgIcon.vue'
 
 @media (min-width: 768px) {
   .cost-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
@@ -311,7 +376,7 @@ import SvgIcon from '../components/SvgIcon.vue'
 
 @media (min-width: 768px) {
   .aids-grid {
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 

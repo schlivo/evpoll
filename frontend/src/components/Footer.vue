@@ -1,5 +1,7 @@
 <script setup>
-const currentYear = new Date().getFullYear()
+import { inject, ref } from 'vue'
+
+const instanceConfig = inject('instanceConfig', ref({}))
 </script>
 
 <template>
@@ -21,10 +23,10 @@ const currentYear = new Date().getFullYear()
       </div>
 
       <div class="footer-bottom">
-        <p>&copy; {{ currentYear }} - Copropriété. Tous droits réservés.</p>
-        <p class="footer-note">
-          Données hébergées en France.
-          Aucune donnée transmise à des tiers.
+        <p v-if="instanceConfig.texts?.footer">{{ instanceConfig.texts.footer }}</p>
+        <p v-if="instanceConfig.copro_address" class="footer-note">{{ instanceConfig.copro_name }} – {{ instanceConfig.copro_address }}</p>
+        <p v-if="instanceConfig.privacy?.host" class="footer-note">
+          Hébergeur : {{ instanceConfig.privacy.host }}. Aucune transmission à d'autres tiers.
         </p>
       </div>
     </div>

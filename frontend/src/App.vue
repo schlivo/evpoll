@@ -26,6 +26,8 @@ const currentSection = ref(0)
 const isEnqueteOpen = ref(false)
 const isPrivacyOpen = ref(false)
 const coproName = ref('')
+// Public instance config (/api/config), shared with the views
+const instanceConfig = ref({})
 
 // Fetch copro config on mount
 const fetchConfig = async () => {
@@ -34,6 +36,7 @@ const fetchConfig = async () => {
     if (response.ok) {
       const config = await response.json()
       coproName.value = config.copro_name || ''
+      instanceConfig.value = config
     }
   } catch (error) {
     console.error('Failed to load config:', error)
@@ -42,6 +45,13 @@ const fetchConfig = async () => {
 
 // Provide coproName to children
 provide('coproName', coproName)
+provide('instanceConfig', instanceConfig)
+
+const privacy = computed(() => instanceConfig.value.privacy || {})
+const retentionText = computed(() => {
+  const days = privacy.value.retention_days || 730
+  return days % 365 === 0 ? `${days / 365} an${days >= 730 ? 's' : ''}` : `${days} jours`
+})
 
 const openPrivacy = () => {
   isPrivacyOpen.value = true
@@ -73,13 +83,29 @@ const easeInOutCubic = (t) =>
 /** Ease-out for snap animation */
 const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3)
 
-const openEnquete = () => {
+// Survey opens on the one-screen express answer; the full form is one click away
+const enqueteMode = ref('express')
+provide('enqueteMode', enqueteMode)
+
+const openEnquete = (mode = 'express') => {
+  enqueteMode.value = mode === 'full' ? 'full' : 'express'
   isEnqueteOpen.value = true
   document.body.style.overflow = 'hidden'
 }
 
 // Provide openEnquete to all child components
 provide('openEnquete', openEnquete)
+
+/** Flyer QR codes link to /?express=1 (or /enquete?express=1): open the survey directly. */
+const openEnqueteFromUrl = () => {
+  const params = new URLSearchParams(location.search)
+  if (params.get('express') !== '1' && location.pathname !== '/enquete') return
+  openEnquete('express')
+  // Drop the query so closing the survey doesn't reopen it on reload
+  params.delete('express')
+  const query = params.toString()
+  history.replaceState(history.state, '', '/' + (query ? '?' + query : '') + location.hash)
+}
 
 // Provide section navigation
 const navigateToSection = (sectionId) => {
@@ -316,6 +342,7 @@ const handleKeydown = (e) => {
 
 onMounted(() => {
   fetchConfig()
+  openEnqueteFromUrl()
   window.addEventListener('keydown', handleKeydown)
   window.addEventListener('hashchange', syncHashToSection)
   // Initial hash: scroll to section after DOM is ready
@@ -470,21 +497,32 @@ onUnmounted(() => {
         <div class="privacy-modal-content">
           <div class="privacy-section">
             <h3>Responsable du traitement</h3>
-            <p>La copropriété, représentée par le conseil syndical.</p>
+            <p v-if="privacy.controller">{{ privacy.controller }}</p>
+            <p v-else class="privacy-missing">[Responsable du traitement à compléter dans la configuration de l'instance]</p>
+            <p>Contact : <a :href="'mailto:' + (instanceConfig.contact_email || '')">{{ instanceConfig.contact_email }}</a></p>
           </div>
 
           <div class="privacy-section">
-            <h3>Finalité du traitement</h3>
-            <p>Les données collectées ont pour unique finalité d'évaluer les besoins des résidents en matière de bornes de recharge pour véhicules électriques (IRVE) et de dimensionner le projet.</p>
+            <h3>Finalité et base légale</h3>
+            <p>Les données collectées servent uniquement à évaluer les besoins en bornes de recharge pour véhicules électriques (IRVE), à savoir quelles places équiper et à préparer la décision de l'assemblée générale.</p>
+            <ul>
+              <li><strong>Réponses à l'enquête :</strong> intérêt légitime (préparer la décision de l'assemblée générale sur l'équipement du parking)</li>
+              <li><strong>Adresse e-mail :</strong> votre consentement, que vous pouvez retirer à tout moment</li>
+            </ul>
           </div>
 
           <div class="privacy-section">
             <h3>Données collectées</h3>
+            <p>
+              Vos réponses <strong>ne sont pas anonymes</strong> : le numéro de place permet de les rattacher à un lot.
+              Elles ne sont consultées que par le responsable de l'enquête et ne sont diffusées que sous forme agrégée
+              (nombre de places intéressées, sans nom).
+            </p>
             <ul>
-              <li><strong>Identification :</strong> Bâtiment, numéro d'appartement (optionnel), place de parking (optionnel), statut (propriétaire/locataire)</li>
-              <li><strong>Besoins :</strong> Possession d'un véhicule électrique, niveau d'intérêt, solution préférée, horizon temporel</li>
-              <li><strong>Contact :</strong> Email (optionnel, uniquement si vous souhaitez être informé)</li>
-              <li><strong>Technique :</strong> Adresse IP, date de soumission (à des fins de sécurité)</li>
+              <li><strong>Identification :</strong> numéro de place de parking, escalier ou bâtiment (optionnel), numéro d'appartement (optionnel), statut (propriétaire/locataire)</li>
+              <li><strong>Besoins :</strong> possession d'un véhicule électrique, niveau d'intérêt, solution préférée, horizon</li>
+              <li><strong>Contact :</strong> e-mail (optionnel, uniquement si vous souhaitez être informé)</li>
+              <li><strong>Technique :</strong> date de réponse et type de navigateur (user agent). L'adresse IP n'est pas enregistrée avec votre réponse ; elle figure seulement dans le journal de sécurité.</li>
             </ul>
           </div>
 
@@ -495,30 +533,33 @@ onUnmounted(() => {
 
           <div class="privacy-section">
             <h3>Durée de conservation</h3>
-            <p>Les données sont conservées jusqu'à la fin du projet IRVE, puis 1 an supplémentaire pour d'éventuels suivis. Elles sont ensuite automatiquement supprimées.</p>
+            <ul>
+              <li><strong>Réponses :</strong> {{ retentionText }} au plus après votre réponse, puis suppression automatique</li>
+              <li><strong>Journal de sécurité (adresses IP) :</strong> {{ privacy.audit_retention_days || 365 }} jours, puis suppression automatique</li>
+            </ul>
           </div>
 
           <div class="privacy-section">
             <h3>Vos droits</h3>
             <p>Conformément au RGPD, vous disposez des droits suivants :</p>
             <ul>
-              <li><strong>Droit d'accès :</strong> Obtenir une copie de vos données</li>
-              <li><strong>Droit de rectification :</strong> Corriger des données inexactes</li>
-              <li><strong>Droit à l'effacement :</strong> Demander la suppression de vos données</li>
-              <li><strong>Droit à la portabilité :</strong> Recevoir vos données dans un format structuré</li>
-              <li><strong>Droit de retrait du consentement :</strong> Retirer votre consentement à tout moment</li>
+              <li><strong>Droit d'accès :</strong> obtenir une copie de vos données</li>
+              <li><strong>Droit de rectification :</strong> corriger des données inexactes</li>
+              <li><strong>Droit à l'effacement :</strong> demander la suppression de vos données</li>
+              <li><strong>Droit d'opposition :</strong> vous opposer au traitement de vos réponses</li>
+              <li><strong>Retrait du consentement et portabilité :</strong> pour votre adresse e-mail</li>
             </ul>
-            <p>Pour exercer ces droits, contactez le conseil syndical par email.</p>
+            <p>Pour exercer ces droits, écrivez à l'adresse de contact ci-dessus. Vous pouvez aussi introduire une réclamation auprès de la CNIL (<a href="https://www.cnil.fr" target="_blank" rel="noopener">cnil.fr</a>).</p>
           </div>
 
           <div class="privacy-section">
-            <h3>Sécurité</h3>
+            <h3>Sécurité et hébergement</h3>
             <ul>
               <li>Données chiffrées en transit (HTTPS)</li>
-              <li>Hébergement en France sur serveur privé</li>
+              <li v-if="privacy.host">Hébergeur : {{ privacy.host }}. Aucune transmission à d'autres tiers.</li>
+              <li v-else>Aucune transmission à des tiers autres que l'hébergeur</li>
               <li>Mots de passe administrateur hashés (bcrypt)</li>
               <li>Protection contre les attaques par force brute</li>
-              <li>Aucune transmission à des tiers</li>
             </ul>
           </div>
 
@@ -528,7 +569,8 @@ onUnmounted(() => {
           </div>
 
           <div class="privacy-footer">
-            <p>Dernière mise à jour : Janvier 2026</p>
+            <p v-if="privacy.last_updated">Dernière mise à jour : {{ privacy.last_updated }}</p>
+            <p v-if="instanceConfig.texts?.footer">{{ instanceConfig.texts.footer }}</p>
           </div>
         </div>
       </div>
@@ -995,6 +1037,11 @@ html, body {
 
 .privacy-section li strong {
   color: var(--color-text);
+}
+
+.privacy-missing {
+  color: var(--color-warning);
+  font-style: italic;
 }
 
 .privacy-footer {
