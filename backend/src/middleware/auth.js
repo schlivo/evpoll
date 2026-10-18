@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 
 // In-memory token store with expiration
 // Map<token, { expiresAt: Date, ip: string }>
@@ -22,7 +22,7 @@ setInterval(() => {
  * @returns {Object} - Token and expiration info
  */
 export function generateToken(ip) {
-  const token = uuidv4();
+  const token = randomUUID();
   const expiresAt = Date.now() + TOKEN_EXPIRY_MS;
 
   tokens.set(token, {
