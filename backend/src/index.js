@@ -16,8 +16,9 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Trust proxy for correct IP detection behind reverse proxy
-app.set('trust proxy', 1);
+// Number of reverse proxies in front of the app (Nginx = 1). req.ip is then the
+// client address seen by the outermost trusted proxy; rate limits rely on it.
+app.set('trust proxy', parseInt(process.env.TRUST_PROXY ?? '1', 10));
 
 // Security headers with helmet
 app.use(helmet({

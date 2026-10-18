@@ -71,7 +71,8 @@ export function revokeToken(token) {
  * @returns {string} - Client IP address
  */
 export function getClientIP(req) {
-  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || 'unknown';
+  // req.ip honours `trust proxy` (index.js); the raw X-Forwarded-For header can be forged
+  return req.ip || 'unknown';
 }
 
 /**

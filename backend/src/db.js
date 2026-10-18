@@ -123,6 +123,16 @@ function loadIpHashSecret() {
 const ipHashSecret = loadIpHashSecret();
 
 /**
+ * Keyed signature (server secret, separate purpose prefix), used for form tokens
+ * @param {string} purpose
+ * @param {string} value
+ * @returns {string}
+ */
+export function signValue(purpose, value) {
+  return crypto.createHmac('sha256', ipHashSecret).update(`${purpose}:${value}`).digest('hex');
+}
+
+/**
  * Keyed hash of an IP address (the clear IP is never stored with answers)
  * @param {string} ip
  * @returns {string|null}

@@ -34,6 +34,17 @@ const editError = ref('')
 // Anti-bot: hidden field that people never fill, and time spent on the form
 const honeypot = ref('')
 const formShownAt = ref(Date.now())
+// Signed server timestamp, required to send a new answer (one token per answer)
+const formToken = ref('')
+
+const fetchFormToken = async () => {
+  try {
+    const response = await fetch('/api/survey/form-token', { cache: 'no-store' })
+    if (response.ok) formToken.value = (await response.json()).form_token
+  } catch (e) {
+    // The server will ask to reload the page if the token is missing
+  }
+}
 // Place code printed on the windshield flyer (?p=83&c=K7M4QX)
 const placeCode = ref('')
 
@@ -139,6 +150,7 @@ const resetAnswers = () => {
   errors.value = {}
   submitError.value = ''
   formShownAt.value = Date.now()
+  fetchFormToken()
 }
 
 // "Modifier ma réponse": load the answer with the edit token and reopen the express form
@@ -198,6 +210,7 @@ onMounted(async () => {
   }
 
   fetch('/api/plan').then(r => (r.ok ? r.json() : null)).then(p => { plan.value = p }).catch(() => {})
+  fetchFormToken()
 
   try {
     const response = await fetch('/api/config')
@@ -384,7 +397,12 @@ const sendAnswers = async (express) => {
   // Completing (full form after express) or editing (Modifier ma réponse) updates the same answer
   const completing = (!express || isEditing.value) && editContext.value
   const url = completing ? `/api/survey/${editContext.value.id}` : '/api/survey'
-  const antiBot = { website: honeypot.value, form_elapsed_ms: Date.now() - formShownAt.value, code: placeCode.value || undefined }
+  const antiBot = {
+    website: honeypot.value,
+    form_token: formToken.value,
+    form_elapsed_ms: Date.now() - formShownAt.value,
+    code: placeCode.value || undefined
+  }
   const payload = completing
     ? { ...formData.value, express: express || undefined, edit_token: editContext.value.token }
     : express
@@ -406,9 +424,14 @@ const sendAnswers = async (express) => {
       saveSubmissionMarker(data)
       if (data.edit_token) editContext.value = { id: data.id, token: data.edit_token }
       submitResult.value = data
+      if (!completing) fetchFormToken()
       lastSubmitWasExpress.value = express
       isEditing.value = false
       isSubmitted.value = true
+    } else if (data.error === 'form_token') {
+      // Expired (page left open for hours) or already used: get a new one, the person can resend
+      await fetchFormToken()
+      submitError.value = data.message
     } else if (response.status === 409 && data.error === 'duplicate') {
       // Duplicate submission detected by server
       submitError.value = data.message || 'Une réponse similaire a déjà été enregistrée.'

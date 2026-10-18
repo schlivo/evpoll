@@ -193,6 +193,9 @@ CORS_ORIGIN=http://localhost:5173
 | `TOTAL_LOTS` | Non | Nombre total de lots (pour calcul participation) |
 | `CONTACT_EMAIL` | Non | Email du conseil syndical. Non défini ou laissé à l'exemple `conseil-syndical@exemple.fr` : aucune adresse n'est affichée (`contact_configured: false`) et l'admin affiche un avertissement. Idem `SYNDIC_EMAIL` |
 | `INSTANCE_DIR` | Non | Dossier de l'instance (voir ci-dessous) |
+| `TRUST_PROXY` | Non | Nombre de proxys devant l'application (défaut 1, Nginx) : l'IP utilisée par les limites en dépend |
+| `RATE_ANSWERS_PER_HOUR` / `RATE_ANSWERS_PER_DAY` | Non | Plafonds par IP des nouvelles réponses sans code de place (défaut 30 / 100) ; larges car les opérateurs mobiles partagent les IP |
+| `RATE_API_PER_MINUTE` / `RATE_EDITS_PER_HOUR` | Non | Plafonds par IP des appels API (défaut 600) et des modifications par jeton (défaut 60) |
 | `PARKING_CONFIG` | Non | Fichier JSON décrivant la copro physique (entrées, escaliers, lots/places) |
 | `PARKING_SPOTS` | Non | Nombre de places (numérotées 1..N) si pas d'instance |
 | `DATA_CONTROLLER` | Non | Responsable du traitement affiché dans la notice RGPD |

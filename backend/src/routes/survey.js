@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { body, validationResult } from 'express-validator';
 import crypto from 'crypto';
-import db, { logAuditEvent, hashIp } from '../db.js';
+import db, { logAuditEvent, hashIp, signValue } from '../db.js';
 import { surveyLimiter, surveyDailyLimiter, editLimiter } from '../middleware/rateLimiter.js';
 import { getClientIP } from '../middleware/auth.js';
 import { BUILDING_IDS } from '../config.js';
@@ -215,6 +215,66 @@ const sendValidationErrors = (req, res) => {
 /**
  * Anti-robot checks before validation: honeypot (fake success, nothing stored) and minimal fill time
  */
+// ---- Form token: signed server timestamp handed out when the form is displayed.
+// It proves the minimum fill time server-side (the client-reported duration can be
+// forged) and serves for a single answer.
+const FORM_TOKEN_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+const usedFormTokens = new Map(); // nonce -> expiry (ms)
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [nonce, expiry] of usedFormTokens) if (expiry < now) usedFormTokens.delete(nonce);
+}, 10 * 60 * 1000).unref();
+
+function issueFormToken() {
+  const payload = `${Date.now()}.${crypto.randomBytes(9).toString('hex')}`;
+  return `${payload}.${signValue('form', payload)}`;
+}
+
+/**
+ * @param {string} token
+ * @returns {{ status: 'ok'|'too_fast'|'invalid'|'used', nonce?: string, issuedAt?: number }}
+ */
+function checkFormToken(token) {
+  const [issued, nonce, sig] = String(token || '').split('.');
+  const issuedAt = Number(issued);
+  if (!issued || !nonce || !sig || !Number.isFinite(issuedAt)) return { status: 'invalid' };
+  const expected = signValue('form', `${issued}.${nonce}`);
+  if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
+    return { status: 'invalid' };
+  }
+  const age = Date.now() - issuedAt;
+  if (age > FORM_TOKEN_MAX_AGE_MS || age < -5000) return { status: 'invalid' };
+  if (usedFormTokens.has(nonce)) return { status: 'used' };
+  if (age < MIN_FORM_ELAPSED_MS) return { status: 'too_fast' };
+  return { status: 'ok', nonce, issuedAt };
+}
+
+const markFormTokenUsed = (check) => {
+  if (check?.nonce) usedFormTokens.set(check.nonce, check.issuedAt + FORM_TOKEN_MAX_AGE_MS);
+};
+
+// GET /api/survey/form-token - Token for the next answer (no personal data)
+router.get('/form-token', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ form_token: issueFormToken() });
+});
+
+/**
+ * True when the answer carries the valid windshield code of the (single) lot it declares.
+ * Such answers are bounded by the number of lots, so per-IP limits do not apply to them;
+ * a wrong code still goes through the limiters, which also slows down code guessing.
+ */
+function hasValidPlaceCode(req) {
+  if (!req.body?.code || !req.body?.parking_spot) return false;
+  const { value } = normalizeParkingSpots(req.body.parking_spot);
+  const lots = value ? lotsForParkingSpot(value) : [];
+  return lots.length === 1 && verifyCode(lots[0].key, req.body.code);
+}
+
+const unlessPlaceCode = (limiter) => (req, res, next) =>
+  (hasValidPlaceCode(req) ? next() : limiter(req, res, next));
+
 function antiRobot(req, res, next) {
   const clientIP = getClientIP(req);
   if (req.body.website) {
@@ -229,15 +289,26 @@ function antiRobot(req, res, next) {
       message: 'Votre réponse a été enregistrée. Merci de votre participation !'
     });
   }
-  const elapsed = Number(req.body.form_elapsed_ms);
-  if (req.body.form_elapsed_ms !== undefined && req.body.form_elapsed_ms !== null && Number.isFinite(elapsed) && elapsed < MIN_FORM_ELAPSED_MS) {
-    logAuditEvent('too_fast', clientIP, { elapsed_ms: elapsed });
+  const check = checkFormToken(req.body.form_token);
+  if (check.status === 'too_fast') {
+    logAuditEvent('too_fast', clientIP, {});
     return res.status(400).json({
       success: false,
       error: 'too_fast',
       message: 'Merci de vérifier vos réponses avant d\'envoyer.'
     });
   }
+  if (check.status !== 'ok') {
+    logAuditEvent('form_token_' + check.status, clientIP, {});
+    return res.status(400).json({
+      success: false,
+      error: 'form_token',
+      message: check.status === 'used'
+        ? 'Cette réponse a déjà été envoyée.'
+        : 'Le formulaire a expiré. Rechargez la page pour répondre.'
+    });
+  }
+  req.formTokenCheck = check;
   next();
 }
 
@@ -255,7 +326,7 @@ function findEditable(id, editToken) {
 }
 
 // POST /api/survey - Submit a survey response (full form or express)
-router.post('/', surveyLimiter, surveyDailyLimiter, antiRobot, surveyValidation, (req, res) => {
+router.post('/', unlessPlaceCode(surveyLimiter), unlessPlaceCode(surveyDailyLimiter), antiRobot, surveyValidation, (req, res) => {
   if (sendValidationErrors(req, res)) return;
 
   const express = req.body.express ? 1 : 0;
@@ -299,6 +370,7 @@ router.post('/', surveyLimiter, surveyDailyLimiter, antiRobot, surveyValidation,
       verification,
       conflict: saved.conflict
     });
+    markFormTokenUsed(req.formTokenCheck);
 
     res.status(201).json({
       success: true,
