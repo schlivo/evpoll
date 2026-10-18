@@ -302,6 +302,15 @@ onUnmounted(() => {
         </div>
 
         <div class="privacy-section">
+          <h3>Destinataires</h3>
+          <p>
+            Les réponses ne sont consultées que par le responsable de l'enquête. Elles ne sont transmises à
+            aucun tiers (syndic, Enedis, opérateur ou installateur) : seuls des totaux sont communiqués,
+            par exemple le nombre de places ou de lots intéressés.
+          </p>
+        </div>
+
+        <div class="privacy-section">
           <h3>Durée de conservation</h3>
           <ul>
             <li><strong>Réponses :</strong> {{ retentionText }} au plus après votre réponse, puis suppression automatique</li>

@@ -520,6 +520,10 @@ onMounted(() => {
             <strong>Lots intéressés ({{ spots.interested_lots.length }}) :</strong>
             {{ spots.interested_lots.map(l => `n°${l.lot} (${l.places.join('-')})`).join(', ') }}
           </p>
+          <p v-if="interestedSpots.length || spots.interested_lots?.length" class="spots-note">
+            Usage interne : ces listes ne sont transmises à personne (syndic, Enedis, opérateurs).
+            Seuls des totaux sont communiqués, comme l'indique la notice.
+          </p>
           <ParkingPlan
             v-if="spots.parking_spots"
             :parking-spots="spots.parking_spots"
