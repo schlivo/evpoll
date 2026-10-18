@@ -171,8 +171,9 @@ const sendValidationErrors = (req, res) => {
 router.post('/', surveyLimiter, surveyValidation, (req, res) => {
   if (sendValidationErrors(req, res)) return;
 
-  const row = toRow(req.body);
   const express = req.body.express ? 1 : 0;
+  // Express answers carry no email: consent is only given on the thank-you screen
+  const row = toRow(express ? { ...req.body, email: null, consent_contact: false } : req.body);
   const clientIP = getClientIP(req);
   const userAgent = req.headers['user-agent'] || 'unknown';
 
@@ -290,6 +291,58 @@ router.put('/:id', surveyLimiter, surveyValidation, (req, res) => {
       success: true,
       message: 'Vos réponses ont été complétées. Merci !',
       id
+    });
+  } catch (error) {
+    console.error('Database error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Une erreur est survenue. Veuillez réessayer.'
+    });
+  }
+});
+
+// PATCH /api/survey/:id/contact - Add an email (with explicit consent) to a recent answer,
+// e.g. from the thank-you screen of an express answer. Only touches the contact fields.
+const contactValidation = [
+  body('email')
+    .trim()
+    .notEmpty().withMessage('Email requis')
+    .isEmail().withMessage('Email invalide')
+    .normalizeEmail(),
+  body('consent_contact')
+    .custom(value => value === true || value === 'true').withMessage('Le consentement est requis pour enregistrer votre email'),
+  body('consent_timestamp')
+    .optional()
+    .isISO8601().withMessage('Date de consentement invalide')
+];
+
+router.patch('/:id/contact', surveyLimiter, contactValidation, (req, res) => {
+  if (sendValidationErrors(req, res)) return;
+
+  const id = parseInt(req.params.id, 10);
+  const editToken = String(req.body.edit_token || '');
+  const clientIP = getClientIP(req);
+
+  try {
+    const result = db.prepare(`
+      UPDATE responses
+      SET email = ?, consent_contact = 1, consent_timestamp = ?
+      WHERE id = ? AND edit_token_hash = ?
+      AND created_at > datetime('now', '${EDIT_WINDOW}')
+    `).run(req.body.email, req.body.consent_timestamp || new Date().toISOString(), id, hashToken(editToken));
+
+    if (result.changes === 0) {
+      return res.status(403).json({
+        success: false,
+        message: 'Cette réponse ne peut plus être modifiée. Contactez le conseil syndical.'
+      });
+    }
+
+    logAuditEvent('contact_added', clientIP, { response_id: id });
+
+    res.json({
+      success: true,
+      message: 'C\'est noté : vous serez informé de la suite du projet.'
     });
   } catch (error) {
     console.error('Database error:', error);

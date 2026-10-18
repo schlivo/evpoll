@@ -24,6 +24,12 @@ const existingSubmissionBuilding = ref('')
 const editContext = ref(null)
 const lastSubmitWasExpress = ref(false)
 
+// Optional "keep me informed" block on the thank-you screen of an express answer
+const contactForm = ref({ email: '', consent: false })
+const contactError = ref('')
+const contactSaving = ref(false)
+const contactSaved = ref(false)
+
 const formData = ref({
   building: '',
   apartment: '',
@@ -248,7 +254,9 @@ const sendAnswers = async (express) => {
   const url = completing ? `/api/survey/${editContext.value.id}` : '/api/survey'
   const payload = completing
     ? { ...formData.value, edit_token: editContext.value.token }
-    : { ...formData.value, express }
+    : express
+      ? { ...formData.value, email: '', consent_contact: false, consent_timestamp: null, express }
+      : { ...formData.value, express }
 
   try {
     const response = await fetch(url, {
@@ -288,6 +296,47 @@ const submitExpress = async () => {
 const submitForm = async () => {
   if (!validateStep(currentStep.value)) return
   await sendAnswers(false)
+}
+
+const saveContact = async () => {
+  contactError.value = ''
+  const email = contactForm.value.email.trim()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    contactError.value = 'Veuillez saisir une adresse e-mail valide'
+    return
+  }
+  if (!contactForm.value.consent) {
+    contactError.value = 'Cochez la case pour accepter d\'être contacté'
+    return
+  }
+  contactSaving.value = true
+  const consentTimestamp = new Date().toISOString()
+  try {
+    const response = await fetch(`/api/survey/${editContext.value.id}/contact`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        edit_token: editContext.value.token,
+        email,
+        consent_contact: true,
+        consent_timestamp: consentTimestamp
+      })
+    })
+    const data = await response.json()
+    if (response.ok) {
+      contactSaved.value = true
+      // Keep the full form consistent if the respondent completes it afterwards
+      formData.value.email = email
+      formData.value.consent_contact = true
+      formData.value.consent_timestamp = consentTimestamp
+    } else {
+      contactError.value = data.errors?.join(', ') || data.message || 'Une erreur est survenue'
+    }
+  } catch (error) {
+    contactError.value = 'Impossible d\'enregistrer votre e-mail. Veuillez réessayer.'
+  } finally {
+    contactSaving.value = false
+  }
 }
 
 // Switch to the full form, prefilled with the express answers
@@ -351,6 +400,44 @@ const switchToFull = () => {
           Votre réponse a été enregistrée. Elle nous aidera à définir
           la meilleure solution pour notre copropriété.
         </p>
+        <div v-if="lastSubmitWasExpress && editContext" class="contact-block">
+          <template v-if="!contactSaved">
+            <h3>Être informé de la suite (facultatif)</h3>
+            <div class="form-group">
+              <label class="form-label" for="contact_email">Votre e-mail</label>
+              <input
+                type="email"
+                id="contact_email"
+                v-model="contactForm.email"
+                class="form-input"
+                autocomplete="email"
+                placeholder="votre@email.com"
+              />
+            </div>
+            <label class="checkbox-option compact" :class="{ selected: contactForm.consent }">
+              <input type="checkbox" v-model="contactForm.consent" />
+              <span class="checkbox-label">
+                <strong>J'accepte d'être contacté</strong>
+                <span>
+                  Mon e-mail sert uniquement à m'informer de l'avancement du projet IRVE.
+                  Je peux retirer mon consentement à tout moment.
+                </span>
+              </span>
+            </label>
+            <span v-if="contactError" class="form-error">{{ contactError }}</span>
+            <button
+              type="button"
+              class="btn btn-secondary contact-submit"
+              :disabled="contactSaving"
+              @click="saveContact"
+            >
+              {{ contactSaving ? 'Enregistrement...' : 'M\'informer' }}
+            </button>
+          </template>
+          <p v-else class="contact-saved">
+            C'est noté : vous serez informé de la suite du projet.
+          </p>
+        </div>
         <div class="success-actions">
           <button
             v-if="lastSubmitWasExpress && editContext"
@@ -1110,6 +1197,34 @@ const switchToFull = () => {
   text-decoration: underline;
   padding-left: 0;
   padding-right: 0;
+}
+
+.contact-block {
+  text-align: left;
+  border-top: 1px solid var(--color-border);
+  padding-top: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.contact-block h3 {
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.contact-block .form-group {
+  margin-bottom: 0;
+}
+
+.contact-submit {
+  margin-top: 0.75rem;
+  width: 100%;
+}
+
+.contact-saved {
+  text-align: center;
+  color: var(--color-success);
+  font-weight: 600;
+  margin: 0;
 }
 
 .success-actions {
