@@ -162,7 +162,7 @@ import SvgIcon from '../components/SvgIcon.vue'
               <span class="amount">Selon devis</span>
             </div>
             <div class="example-row aid">
-              <span>Prime ADVENIR (50 % du HT éligible, plafond 1 000 €, ordre de grandeur)</span>
+              <span>Prime ADVENIR : 50 % × 1 200 € HT, sous le plafond de 1 000 € HT (offre signée avant les travaux)</span>
               <span class="amount">~ - 600 €</span>
             </div>
           </div>

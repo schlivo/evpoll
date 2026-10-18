@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import db, { logAuditEvent, getAuditLog, cleanupOldRecords } from '../db.js';
 import { authLimiter, rgpdLimiter } from '../middleware/rateLimiter.js';
 import { generateToken, requireAuth, revokeToken, getClientIP, validateToken } from '../middleware/auth.js';
-import { TOTAL_LOTS, PARKING_SPOTS, LOTS, PRIVACY, loadParkingPlan } from '../config.js';
+import { TOTAL_LOTS, PARKING_SPOTS, LOTS, PRIVACY, BUILDINGS, BUILDINGS_QUESTION, loadParkingPlan } from '../config.js';
 import { extractSpotNumbers, spotsToLots } from '../parking.js';
 
 const router = Router();
@@ -285,7 +285,8 @@ export function handleExportCSV(req, res) {
     const headers = [
       'ID',
       'Date',
-      'Bâtiment',
+      'Bâtiment / entrée',
+      'Escalier',
       'Appartement',
       'Place parking',
       'Pas de place',
@@ -315,12 +316,18 @@ export function handleExportCSV(req, res) {
       return str;
     };
 
+    // Export shows the entrance label and, when known, its staircase letter
+    const buildingById = new Map(BUILDINGS.map(b => [b.id, b]));
+    const extraById = new Map(BUILDINGS_QUESTION.extra_choices.map(c => [c.id, c.label]));
+    const buildingLabel = (id) => buildingById.get(id)?.label || extraById.get(id) || id;
+
     const csvRows = [
       headers.join(','),
       ...responses.map(r => [
         r.id,
         r.created_at,
-        r.building,
+        escapeCSV(buildingLabel(r.building)),
+        buildingById.get(r.building)?.escalier || '',
         r.apartment,
         escapeCSV(r.parking_spot),
         r.no_parking ? 'Oui' : 'Non',

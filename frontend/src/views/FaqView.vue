@@ -1,6 +1,9 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, inject } from 'vue'
 import SvgIcon from '../components/SvgIcon.vue'
+
+// Public instance config loaded by App.vue (address, footer text)
+const instanceConfig = inject('instanceConfig', ref({}))
 
 const openItems = ref([])
 const contactEmail = ref('conseil.syndical@copropriete.fr')
@@ -130,6 +133,12 @@ const faqItems = [
         </div>
       </section>
 
+      <div v-if="instanceConfig.copro_address || instanceConfig.texts?.footer" class="site-address">
+        <p v-if="instanceConfig.copro_address">{{ instanceConfig.copro_name }} – {{ instanceConfig.copro_address }}</p>
+        <p v-if="instanceConfig.parking_address">Parking : {{ instanceConfig.parking_address }}</p>
+        <p v-if="instanceConfig.texts?.footer">{{ instanceConfig.texts.footer }}</p>
+      </div>
+
     </div>
   </div>
 </template>
@@ -190,6 +199,17 @@ const faqItems = [
 
 .accordion-item.open .accordion-content {
   display: block;
+}
+
+.site-address {
+  margin-top: 2rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.site-address p {
+  margin: 0.15rem 0;
 }
 
 .contact-section {

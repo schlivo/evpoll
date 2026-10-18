@@ -7,6 +7,11 @@
 //   INSTANCE_DIR/instance.json       (see instances/demo/instance.json)
 //   INSTANCE_DIR/plan/parking.json   (optional, admin parking plan coordinates)
 //
+// The physical description (copro, entrances, staircases, parking lots) can
+// live in a separate file given by PARKING_CONFIG (same keys: copro,
+// buildings, entrances, parking). instance.json values win over it, so
+// display texts stay in the instance.
+//
 // Environment variables still override the matching instance values, so
 // existing env-only deployments keep working. Secrets stay in .env only.
 import { readFileSync, existsSync } from 'fs';
@@ -24,30 +29,55 @@ function readJson(path) {
   }
 }
 
-const instance = (INSTANCE_DIR && readJson(join(INSTANCE_DIR, 'instance.json'))) || {};
-if (INSTANCE_DIR && !instance.copro) {
+const instanceFile = (INSTANCE_DIR && readJson(join(INSTANCE_DIR, 'instance.json'))) || {};
+if (INSTANCE_DIR && !Object.keys(instanceFile).length) {
   console.warn(`INSTANCE_DIR set but ${join(INSTANCE_DIR, 'instance.json')} is missing or empty`);
 }
+
+const PARKING_CONFIG = process.env.PARKING_CONFIG ? resolve(process.env.PARKING_CONFIG) : null;
+const parkingFile = readJson(PARKING_CONFIG) || {};
+if (PARKING_CONFIG && !Object.keys(parkingFile).length) {
+  console.warn(`PARKING_CONFIG set but ${PARKING_CONFIG} is missing or empty`);
+}
+
+const instance = {
+  ...parkingFile,
+  ...instanceFile,
+  copro: { ...parkingFile.copro, ...instanceFile.copro }
+};
 
 const env = (name) => (process.env[name] !== undefined ? process.env[name] : undefined);
 const envInt = (name) => parseInt(process.env[name], 10) || null;
 
+// display_* texts (instance.json) win over the raw addresses of the parking file
 export const COPRO = {
-  name: env('COPRO_NAME') || instance.copro?.name || 'Ma Copropriété',
-  address: instance.copro?.address || '',
-  parking_address: instance.copro?.parking_address || ''
+  name: env('COPRO_NAME') || instance.copro.name || 'Ma Copropriété',
+  address: instance.copro.display_address || instance.copro.address || '',
+  parking_address: instance.copro.display_parking_address || instance.copro.parking_address || ''
 };
 
-// Buildings / staircases. Empty BUILDINGS (BUILDINGS=) hides the question;
-// unset keeps the instance list, then the demo default.
+const slug = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+// Buildings / entrances. Empty BUILDINGS (BUILDINGS=) hides the question;
+// unset uses the instance entrances (street addresses), then its buildings,
+// then the demo default. The staircase letter of an entrance (`escalier`) is
+// never shown to respondents, only in the admin export.
 const envBuildings = env('BUILDINGS');
 export const BUILDINGS = envBuildings !== undefined
   ? envBuildings.split(',').map(b => b.trim()).filter(Boolean).map(id => ({ id, label: `Bâtiment ${id}`, address: null }))
-  : (instance.buildings || ['A', 'B', 'C', 'D'].map(id => ({ id, label: `Bâtiment ${id}` })))
-    .map(b => ({ id: b.id, label: b.label || `Bâtiment ${b.id}`, address: b.adresse ?? b.address ?? null }));
+  : instance.entrances?.length
+    ? instance.entrances.map(e => ({
+      id: e.id || slug(e.adresse || e.address),
+      label: e.label || e.adresse || e.address,
+      address: null,
+      escalier: e.escalier || null
+    }))
+    : (instance.buildings || ['A', 'B', 'C', 'D'].map(id => ({ id, label: `Bâtiment ${id}` })))
+      .map(b => ({ id: b.id, label: b.label || `Bâtiment ${b.id}`, address: b.adresse ?? b.address ?? null }));
 
 export const BUILDINGS_QUESTION = {
-  label: instance.buildings_question?.label || 'Votre bâtiment',
+  label: instance.buildings_question?.label || (instance.entrances?.length ? 'Votre entrée' : 'Votre bâtiment'),
   extra_choices: instance.buildings_question?.extra_choices || []
 };
 

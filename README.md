@@ -193,6 +193,7 @@ CORS_ORIGIN=http://localhost:5173
 | `TOTAL_LOTS` | Non | Nombre total de lots (pour calcul participation) |
 | `CONTACT_EMAIL` | Non | Email du conseil syndical |
 | `INSTANCE_DIR` | Non | Dossier de l'instance (voir ci-dessous) |
+| `PARKING_CONFIG` | Non | Fichier JSON décrivant la copro physique (entrées, escaliers, lots/places) |
 | `PARKING_SPOTS` | Non | Nombre de places (numérotées 1..N) si pas d'instance |
 | `DATA_CONTROLLER` | Non | Responsable du traitement affiché dans la notice RGPD |
 | `RETENTION_DAYS` | Non | Conservation des réponses en jours (défaut 730), affichée dans la notice |
@@ -208,6 +209,9 @@ Le code de ce dépôt (public) est **générique**. Tout ce qui est propre à un
 ├── instance.json        nom, adresses, escaliers/bâtiments, lots et places (lots doubles),
 │                        campagne (date limite, signature), paramètres de la notice RGPD,
 │                        textes courts (pied de page)
+├── parking.json         (optionnel, via PARKING_CONFIG) description physique : copro,
+│                        entrées (`entrances[]`, lettre d'escalier visible seulement dans
+│                        l'export admin), escaliers, lots et places ; instance.json l'emporte
 ├── plan/parking.json    (optionnel) coordonnées des places pour le plan de l'admin
 └── docs/                (optionnel) briefs, revues, non servis par l'application
 ```

@@ -129,6 +129,7 @@ puis dans `env` de l'`ecosystem.config.cjs` :
 
 ```javascript
       INSTANCE_DIR: '/var/www/evpoll-instances/nouveau-client',
+      PARKING_CONFIG: '/var/www/evpoll-instances/nouveau-client/parking.json', // optionnel
       // retirez COPRO_NAME / BUILDINGS / TOTAL_LOTS : ils écraseraient l'instance
 ```
 
