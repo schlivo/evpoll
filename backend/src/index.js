@@ -7,7 +7,12 @@ import { dirname, join } from 'path';
 
 import surveyRouter from './routes/survey.js';
 import statsRouter, { handleExportCSV } from './routes/stats.js';
-import { globalLimiter } from './middleware/rateLimiter.js';
+import { globalLimiter, planAccessLimiter } from './middleware/rateLimiter.js';
+import { CAMPAIGN_KEY_REQUIRED, PLAN_REQUIRES_CODE, normalizeKey, verifyCampaignKey } from './campaign.js';
+import { normalizeParkingSpots } from './parking.js';
+import { lotsForParkingSpot, verifyCode } from './lots.js';
+import { getEffectiveSettings } from './settings.js';
+import { COPRO, BUILDINGS, BUILDINGS_QUESTION, PARKING_SPOTS, LOTS, PRIVACY, TEXTS, loadParkingPlan } from './config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -15,8 +20,9 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Trust proxy for correct IP detection behind reverse proxy
-app.set('trust proxy', 1);
+// Number of reverse proxies in front of the app (Nginx = 1). req.ip is then the
+// client address seen by the outermost trusted proxy; rate limits rely on it.
+app.set('trust proxy', parseInt(process.env.TRUST_PROXY ?? '1', 10));
 
 // Security headers with helmet
 app.use(helmet({
@@ -26,7 +32,7 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'"],
       scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      imgSrc: ["'self'", "data:", "https://api.qrserver.com"],
+      imgSrc: ["'self'", "data:"],
       connectSrc: ["'self'"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       objectSrc: ["'none'"],
@@ -68,16 +74,76 @@ app.get('/api/health', (req, res) => {
 
 // Public config endpoint (non-sensitive configuration for frontend)
 app.get('/api/config', (req, res) => {
-  const COPRO_NAME = process.env.COPRO_NAME || 'Ma Copropriété';
-  const BUILDINGS = (process.env.BUILDINGS || 'A,B,C,D').split(',').map(b => b.trim());
-  const CONTACT_EMAIL = process.env.CONTACT_EMAIL || 'conseil-syndical@exemple.fr';
-  const SYNDIC_EMAIL = process.env.SYNDIC_EMAIL || 'syndic@exemple.fr';
+  // Admin settings > environment > instance files (example addresses never reach respondents)
+  const settings = getEffectiveSettings();
   res.json({
-    copro_name: COPRO_NAME,
-    buildings: BUILDINGS,
-    contact_email: CONTACT_EMAIL,
-    syndic_email: SYNDIC_EMAIL
+    copro_name: COPRO.name,
+    copro_address: COPRO.address,
+    parking_address: COPRO.parking_address,
+    // Kept as a list of ids for older frontends; details in building_choices
+    buildings: BUILDINGS.map(b => b.id),
+    building_question: BUILDINGS_QUESTION.label,
+    building_choices: [
+      ...BUILDINGS.map(b => ({ id: b.id, label: b.label, address: b.address })),
+      ...BUILDINGS_QUESTION.extra_choices
+    ],
+    parking_spots: PARKING_SPOTS,
+    // Only multi-spot lots: lets the form ask "are both spots concerned?"
+    multi_spot_lots: LOTS.filter(l => l.places.length > 1),
+    // Full lot table (single lots included) for "Place 82 · lot n°144 · place simple"
+    lots: LOTS,
+    contact_email: settings.contact_email,
+    contact_configured: !!settings.contact_email,
+    syndic_email: settings.syndic_email,
+    syndic_configured: !!settings.syndic_email,
+    privacy: { ...PRIVACY, controller: settings.data_controller },
+    texts: {
+      ...TEXTS,
+      hero_kicker: settings.hero_kicker,
+      hero_title: settings.hero_title,
+      paper_contact: settings.paper_contact
+    },
+    legal: {
+      publisher: settings.publisher,
+      publication_director: settings.publication_director,
+      publisher_contact: settings.publisher_contact,
+      host_name: settings.host_name,
+      host_address: settings.host_address,
+      host_phone: settings.host_phone
+    },
+    // Campaign defaults for the flyer generator (editable there)
+    campaign_deadline: settings.campaign_deadline,
+    campaign_signature: settings.campaign_signature,
+    // The survey then asks for the code printed on the documents
+    campaign_key_required: CAMPAIGN_KEY_REQUIRED,
+    // The parking plan is only sent with a printed code (GET /api/plan)
+    plan_requires_code: PLAN_REQUIRES_CODE
   });
+});
+
+// Parking plan (geometry only, no answers), cached in memory. With PLAN_REQUIRES_CODE it is
+// only sent with a printed code: the campaign key (X-Access-Code), or a place code with
+// its spot (X-Access-Code + X-Access-Spot). Wrong codes count towards planAccessLimiter.
+const parkingPlan = loadParkingPlan();
+
+function hasPlanAccess(req) {
+  const code = req.get('X-Access-Code');
+  if (!code) return false;
+  if (verifyCampaignKey(code)) return true;
+  const { value } = normalizeParkingSpots(req.get('X-Access-Spot') || '');
+  const lots = value ? lotsForParkingSpot(value) : [];
+  return lots.length === 1 && verifyCode(lots[0].key, code);
+}
+
+app.get('/api/plan', planAccessLimiter, (req, res) => {
+  if (!parkingPlan) return res.status(404).json({ error: 'Pas de plan pour cette instance' });
+  if (!PLAN_REQUIRES_CODE) {
+    res.set('Cache-Control', 'public, max-age=3600');
+    return res.json(parkingPlan);
+  }
+  res.set('Cache-Control', 'private, no-store');
+  if (!hasPlanAccess(req)) return res.status(403).json({ error: 'code_required' });
+  res.json(parkingPlan);
 });
 
 // Serve static files in production
@@ -85,6 +151,11 @@ const publicPath = join(__dirname, '../public');
 app.use(express.static(publicPath));
 
 // Flyer generator route - redirect to static file
+// Short link printed on the campaign documents: /r/K7M4QX opens the express answer with the key
+app.get('/r/:key', (req, res) => {
+  res.redirect(`/?express=1&k=${encodeURIComponent(normalizeKey(req.params.key))}`);
+});
+
 app.get('/flyer', (req, res) => {
   res.redirect('/flyer.html');
 });

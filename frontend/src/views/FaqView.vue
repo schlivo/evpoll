@@ -1,32 +1,15 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import SvgIcon from '../components/SvgIcon.vue'
+import { ref, computed, inject } from 'vue'
+import Accordion from '../components/Accordion.vue'
 
-const openItems = ref([])
-const contactEmail = ref('conseil.syndical@copropriete.fr')
-const syndicEmail = ref('syndic@gestionnaire.fr')
+// Public instance config loaded by App.vue (contacts)
+const instanceConfig = inject('instanceConfig', ref({}))
 
-// Per-instance contacts come from the backend (CONTACT_EMAIL / SYNDIC_EMAIL);
-// the literals above are only the fallback if /api/config is unreachable.
-onMounted(async () => {
-  try {
-    const response = await fetch('/api/config')
-    const config = await response.json()
-    contactEmail.value = config.contact_email || contactEmail.value
-    syndicEmail.value = config.syndic_email || syndicEmail.value
-  } catch (error) {
-    console.error('Failed to load config:', error)
-  }
-})
+// Per-instance contacts (CONTACT_EMAIL / SYNDIC_EMAIL): hidden when not configured
+const contactEmail = computed(() => instanceConfig.value.contact_email || '')
+const syndicEmail = computed(() => instanceConfig.value.syndic_email || '')
 
-const toggleItem = (index) => {
-  const idx = openItems.value.indexOf(index)
-  if (idx > -1) {
-    openItems.value.splice(idx, 1)
-  } else {
-    openItems.value.push(index)
-  }
-}
+const openItems = ref({})
 
 const faqItems = [
   {
@@ -35,19 +18,19 @@ const faqItems = [
   },
   {
     question: "Puis-je installer une borne seul, sans attendre la copropriété ?",
-    answer: "Oui, c'est le \"droit à la prise\". Tout occupant peut demander l'installation d'une borne à ses frais. Le syndic dispose de 3 mois pour répondre et ne peut refuser que pour des motifs sérieux (impossibilité technique). Cependant, une solution collective est généralement plus avantageuse financièrement."
+    answer: "Oui, c'est le \"droit à la prise\". Tout occupant peut faire installer une borne à ses frais. Il notifie son projet au syndic par lettre recommandée avec accusé de réception, avec un descriptif et un plan. Le syndic ne décide pas : il dispose de 3 mois pour saisir le tribunal judiciaire s'il a un motif sérieux et légitime (impossibilité technique, ou projet collectif voté ou en cours sous 6 mois). S'il ne le fait pas, les travaux peuvent avoir lieu. Ces 3 mois sont donc un délai minimal avant travaux, pas une garantie de rapidité. Un projet collectif en cours peut justifier d'attendre la solution commune."
   },
   {
     question: "Combien coûte l'installation d'une borne ?",
-    answer: "En installation individuelle, comptez 2000 à 4000 euros tout compris. En installation collective avec colonne horizontale Enedis, le coût par place peut descendre à 500-1500 euros grâce aux économies d'échelle et aux aides (ADVENIR, prime Enedis, TVA réduite)."
+    answer: "En installation individuelle, comptez 2000 à 4000 euros tout compris (ordre de grandeur). Avec la colonne horizontale Enedis, chaque utilisateur paie trois postes distincts : la quote-part Enedis (456 à 2 267 € TTC en 2026, versée une fois au raccordement), la dérivation individuelle (ordre de grandeur : environ 310 € TTC si elle est demandée avec les travaux, environ 389 € TTC après) et sa borne, sur devis. La prime ADVENIR peut couvrir 50 % du coût HT de la borne (plafond 1 000 € HT). Consultez la page Financement pour le détail."
   },
   {
     question: "Comment fonctionne la facturation avec une colonne Enedis ?",
-    answer: "Chaque utilisateur dispose de son propre compteur Enedis. Vous payez directement votre consommation électrique à Enedis, comme pour votre logement. La copropriété n'a pas à gérer la facturation entre résidents."
+    answer: "Chaque utilisateur dispose de son propre compteur Linky. Le gestionnaire du réseau (Enedis) pose le compteur mais n'envoie pas de facture de consommation : vous souscrivez un contrat auprès du fournisseur d'électricité de votre choix (EDF, Engie, TotalEnergies...), qui vous facture, comme pour votre logement. La copropriété n'a pas à gérer la facturation entre résidents."
   },
   {
     question: "Quelle puissance choisir pour ma borne ?",
-    answer: "Pour un usage quotidien à domicile, une borne 7,4 kW (monophasé) ou 11 kW (triphasé) est largement suffisante. Elle permet de recharger environ 40-60 km d'autonomie par heure de charge. La recharge complète d'une voiture se fait en une nuit."
+    answer: "Pour un usage quotidien à domicile, une borne 7,4 kW (monophasé) ou 11 kW (triphasé) est largement suffisante. Elle permet de recharger environ 40 à 60 km d'autonomie par heure de charge (ordre de grandeur, selon le véhicule). La recharge complète d'une voiture se fait en une nuit."
   },
   {
     question: "Le réseau électrique de l'immeuble peut-il supporter plusieurs bornes ?",
@@ -55,11 +38,11 @@ const faqItems = [
   },
   {
     question: "Quelles sont les aides financières disponibles ?",
-    answer: "Plusieurs aides sont cumulables : le programme ADVENIR (jusqu'à 50% des coûts), la prime Enedis pour la colonne horizontale, la TVA à 5,5%, et le crédit d'impôt (300 euros). Consultez la page Aides pour plus de détails."
+    answer: "En 2026 : la prime ADVENIR (50 % du coût HT de la borne, plafonnée à 1 000 € HT ; 50 % de l'infrastructure collective, plafonnée à 12 500 € HT jusqu'à 100 places) pour une offre de prime signée avant les travaux, avec un installateur qualifié IRVE. Une TVA réduite est possible sous conditions, à confirmer sur le devis. Consultez la page Financement pour les détails et les sources."
   },
   {
     question: "Faut-il voter en Assemblée Générale ?",
-    answer: "Oui, pour une installation collective, le projet doit être voté en AG. La majorité simple (article 24) suffit généralement. Le vote porte sur le principe de l'installation, le choix de la solution technique et le budget."
+    answer: "Oui, pour une installation collective, le projet doit être voté en AG. La majorité simple (article 24) s'applique à l'équipement des places et à la signature d'une convention sans frais pour la copropriété avec Enedis ou un opérateur. Au moins un devis d'opérateur doit être présenté 2 mois avant l'AG qui vote une convention avec Enedis."
   },
   {
     question: "Je suis locataire, puis-je participer ?",
@@ -67,154 +50,92 @@ const faqItems = [
   },
   {
     question: "Que se passe-t-il si je n'ai pas de véhicule électrique ?",
-    answer: "L'infrastructure sera prête pour le jour où vous en aurez un. Le coût de l'infrastructure commune est réparti entre tous les lots, mais vous ne payez le raccordement individuel que si vous souhaitez utiliser une borne."
+    answer: "L'infrastructure sera prête pour le jour où vous en aurez un. Avec la solution Enedis, vous n'avez rien à payer tant que vous ne vous raccordez pas : seuls les utilisateurs payent leur raccordement et leur borne. Avec une infrastructure collective privée, en revanche, le coût de l'infrastructure commune est réparti entre les copropriétaires selon les tantièmes."
   },
   {
     question: "Combien de temps prend l'installation ?",
-    answer: "De la décision en AG à la mise en service, comptez 6 à 12 mois. Ce délai inclut les études techniques, les démarches administratives, les demandes d'aides et les travaux eux-mêmes."
+    answer: "Comptez en général 12 à 18 mois entre la demande à Enedis et la mise en service, dont environ 6 mois de travaux après la signature de la convention. Ce délai inclut les études techniques, le vote en AG, les démarches administratives et les travaux eux-mêmes."
   },
   {
     question: "Mes données sont-elles protégées ?",
-    answer: "Oui, cette enquête respecte le RGPD. Vos réponses sont anonymes (seul le bâtiment est demandé, pas le numéro de lot). L'email est optionnel et uniquement utilisé si vous souhaitez être informé. Les données sont hébergées en France et ne sont pas transmises à des tiers."
+    answer: "Vos réponses ne sont pas anonymes : le numéro de place permet de les rattacher à un lot. Elles ne sont consultées que par le responsable de l'enquête et ne sont diffusées que sous forme agrégée (nombre de places intéressées, sans nom). L'email est optionnel et uniquement utilisé si vous souhaitez être informé. Le détail figure dans la politique de confidentialité."
   }
 ]
 </script>
 
 <template>
-  <div class="page">
-    <div class="container">
-      <header class="page-header">
-        <h1>Questions fréquentes</h1>
-        <p>
-          Retrouvez les réponses aux questions les plus courantes sur
-          l'installation de bornes de recharge en copropriété.
-        </p>
-      </header>
+  <div class="info-view">
+    <header class="info-intro">
+      <p>
+        Retrouvez les réponses aux questions les plus courantes sur
+        l'installation de bornes de recharge en copropriété.
+      </p>
+    </header>
 
-      <div class="accordion">
-        <div
-          v-for="(item, index) in faqItems"
-          :key="index"
-          class="accordion-item"
-          :class="{ open: openItems.includes(index) }"
-        >
-          <button class="accordion-header" @click="toggleItem(index)">
-            <span>{{ item.question }}</span>
-            <span class="accordion-icon">
-              <SvgIcon name="chevron-down" :size="20" />
-            </span>
-          </button>
-          <div class="accordion-content">
-            <p>{{ item.answer }}</p>
-          </div>
-        </div>
-      </div>
-
-      <section class="contact-section">
-        <h2>Vous avez d'autres questions ?</h2>
-        <div class="contact-card">
-          <p>
-            N'hésitez pas à nous contacter pour toute question supplémentaire
-            concernant le projet IRVE de notre copropriété.
-          </p>
-          <div class="contact-info">
-            <div class="contact-item">
-              <strong>Conseil syndical</strong>
-              <a :href="'mailto:' + contactEmail">{{ contactEmail }}</a>
-            </div>
-            <div class="contact-item">
-              <strong>Syndic</strong>
-              <a :href="'mailto:' + syndicEmail">{{ syndicEmail }}</a>
-            </div>
-          </div>
-        </div>
-      </section>
-
+    <div class="faq-list">
+      <Accordion
+        v-for="(item, index) in faqItems"
+        :key="index"
+        v-model:open="openItems[index]"
+        :title="item.question"
+        variant="question"
+        :level="4"
+      >
+        <p>{{ item.answer }}</p>
+      </Accordion>
     </div>
+
+    <section v-if="contactEmail || syndicEmail" class="contact-section">
+      <h4>Vous avez d'autres questions ?</h4>
+      <p>
+        N'hésitez pas à nous contacter pour toute question supplémentaire
+        concernant le projet IRVE de notre copropriété.
+      </p>
+      <dl class="contact-info">
+        <div v-if="contactEmail" class="contact-item">
+          <dt>Conseil syndical</dt>
+          <dd><a :href="'mailto:' + contactEmail">{{ contactEmail }}</a></dd>
+        </div>
+        <div v-if="syndicEmail" class="contact-item">
+          <dt>Syndic</dt>
+          <dd><a :href="'mailto:' + syndicEmail">{{ syndicEmail }}</a></dd>
+        </div>
+      </dl>
+    </section>
   </div>
 </template>
 
 <style scoped>
-.accordion {
-  margin-bottom: 3rem;
+.info-intro p {
+  margin: 0 0 1rem;
+  color: var(--muted);
 }
 
-.accordion-item {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  margin-bottom: 0.5rem;
-  overflow: hidden;
+.faq-list {
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 2rem;
 }
 
-.accordion-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 1rem 1.25rem;
-  background: var(--color-bg-card);
-  border: none;
-  font-size: 1rem;
-  font-weight: 500;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.accordion-header:hover {
-  background: var(--color-bg-alt);
-}
-
-.accordion-icon {
-  color: var(--color-text-muted);
-  transition: transform 0.2s;
-  display: flex;
-  align-items: center;
-}
-
-.accordion-item.open .accordion-icon {
-  transform: rotate(180deg);
-}
-
-.accordion-content {
-  display: none;
-  padding: 0 1.25rem 1rem;
-  background: var(--color-bg-card);
-}
-
-.accordion-content p {
+.faq-list p {
   margin: 0;
-  color: var(--color-text-light);
-  line-height: 1.7;
+  max-width: 70ch;
 }
 
-.accordion-item.open .accordion-content {
-  display: block;
+.contact-section h4 {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--rule);
 }
 
-.contact-section {
-  margin-bottom: 3rem;
-}
-
-.contact-section h2 {
-  margin-bottom: 1rem;
-}
-
-.contact-card {
-  background: var(--color-bg-alt);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-}
-
-.contact-card > p {
-  color: var(--color-text-light);
-  margin-bottom: 1rem;
+.contact-section > p {
+  margin: 0 0 1rem;
 }
 
 .contact-info {
   display: grid;
-  gap: 1rem;
+  gap: 0.75rem 2rem;
+  margin: 0;
 }
 
 @media (min-width: 640px) {
@@ -223,20 +144,12 @@ const faqItems = [
   }
 }
 
-.contact-item {
-  background: var(--color-bg-card);
-  padding: 1rem;
-  border-radius: var(--radius);
+.contact-item dt {
+  font-weight: 700;
 }
 
-.contact-item strong {
-  display: block;
-  margin-bottom: 0.25rem;
+.contact-item dd {
+  margin: 0;
+  overflow-wrap: anywhere;
 }
-
-.contact-item span {
-  color: var(--color-primary);
-  font-size: 0.9rem;
-}
-
 </style>

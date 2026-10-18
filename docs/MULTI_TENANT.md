@@ -116,6 +116,27 @@ module.exports = {
 
 > ⚠️ **Important** : Chaque instance doit avoir un `PORT` différent et un `name` unique.
 
+### Dossier d'instance (recommandé)
+
+Plutôt que de tout passer en variables, placez la configuration propre à la copropriété dans un
+dossier d'instance (modèle : `instances/demo/` du dépôt), versionné dans un **dépôt privé** :
+
+```bash
+git clone git@github.com:<vous>/evpoll-instances.git /var/www/evpoll-instances
+```
+
+puis dans `env` de l'`ecosystem.config.cjs` :
+
+```javascript
+      INSTANCE_DIR: '/var/www/evpoll-instances/nouveau-client',
+      PARKING_CONFIG: '/var/www/evpoll-instances/nouveau-client/parking.json', // optionnel
+      // retirez COPRO_NAME / BUILDINGS / TOTAL_LOTS : ils écraseraient l'instance
+```
+
+L'instance décrit les escaliers, les lots et places (lots doubles), la campagne (date limite,
+signature), les paramètres de la notice RGPD (responsable du traitement, hébergeur, durées de
+conservation) et, en option, le plan du parking affiché dans l'admin (`plan/places.json`).
+
 ### Lancer l'instance
 
 ```bash

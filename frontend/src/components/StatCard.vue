@@ -1,6 +1,6 @@
 <script setup>
-import SvgIcon from './SvgIcon.vue'
-
+// Plain figure + label, ruled, no icon (kept for reuse; the home page
+// now shows a progress bar instead of counters)
 defineProps({
   value: {
     type: [Number, String],
@@ -9,10 +9,6 @@ defineProps({
   label: {
     type: String,
     required: true
-  },
-  icon: {
-    type: String,
-    default: ''
   },
   suffix: {
     type: String,
@@ -23,9 +19,6 @@ defineProps({
 
 <template>
   <div class="stat-card">
-    <div class="stat-icon" v-if="icon">
-      <SvgIcon :name="icon" :size="32" />
-    </div>
     <div class="stat-value">
       {{ value }}<span class="stat-suffix" v-if="suffix">{{ suffix }}</span>
     </div>
@@ -35,31 +28,16 @@ defineProps({
 
 <style scoped>
 .stat-card {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-  text-align: center;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-.stat-icon {
-  color: var(--color-primary);
-  margin-bottom: 0.5rem;
-  display: flex;
-  justify-content: center;
+  border-top: 1px solid var(--rule);
+  padding: 0.75rem 0;
 }
 
 .stat-value {
-  font-size: 2.5rem;
+  font-family: var(--font-title);
+  font-size: 2.25rem;
   font-weight: 700;
-  color: var(--color-primary);
   line-height: 1;
+  color: var(--ink);
 }
 
 .stat-suffix {
@@ -68,8 +46,8 @@ defineProps({
 }
 
 .stat-label {
-  margin-top: 0.5rem;
-  color: var(--color-text-light);
-  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 1rem;
 }
 </style>

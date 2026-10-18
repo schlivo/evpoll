@@ -1,6 +1,12 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import SvgIcon from '../components/SvgIcon.vue'
+import ParkingPlan from '../components/ParkingPlan.vue'
+import AdminConflicts from '../components/AdminConflicts.vue'
+import AdminPaperEntry from '../components/AdminPaperEntry.vue'
+import AdminCodes from '../components/AdminCodes.vue'
+import AdminSettings from '../components/AdminSettings.vue'
+import AdminRights from '../components/AdminRights.vue'
 
 const isAuthenticated = ref(false)
 const password = ref('')
@@ -8,6 +14,14 @@ const authToken = ref('') // Store auth token for API calls
 const tokenExpiry = ref(null)
 const passwordError = ref('')
 const stats = ref(null)
+const spots = ref(null)
+const parkingPlan = ref(null)
+const buildingLabels = ref({})
+const buildingChoices = ref([])
+// False while CONTACT_EMAIL is unset or still the example address
+const contactConfigured = ref(true)
+const exportNotice = ref('')
+const conflictsPanel = ref(null)
 const loading = ref(false)
 const loginLoading = ref(false)
 const error = ref('')
@@ -66,6 +80,8 @@ const logout = async () => {
   sessionStorage.removeItem(TOKEN_STORAGE_KEY)
   sessionStorage.removeItem(TOKEN_EXPIRY_KEY)
   stats.value = null
+  spots.value = null
+  parkingPlan.value = null
 }
 
 // Check if token is still valid
@@ -78,9 +94,15 @@ const loadStats = async () => {
   loading.value = true
   error.value = ''
   try {
-    const response = await fetch('/api/stats')
+    // Full figures are admin-only: the public /api/stats only has global totals
+    const response = await fetch('/api/stats/admin/summary', {
+      headers: { 'Authorization': `Bearer ${authToken.value}` }
+    })
     if (response.ok) {
       stats.value = await response.json()
+      loadSpots()
+    } else if (response.status === 401) {
+      logout()
     } else {
       error.value = 'Erreur lors du chargement des statistiques'
     }
@@ -91,7 +113,49 @@ const loadStats = async () => {
   }
 }
 
+// Spot list is personal data: admin-only endpoint
+const loadSpots = async () => {
+  try {
+    const response = await fetch('/api/stats/admin/spots', {
+      headers: { 'Authorization': `Bearer ${authToken.value}` }
+    })
+    if (response.ok) {
+      spots.value = await response.json()
+    } else if (response.status === 401) {
+      logout()
+      return
+    }
+    const configResponse = await fetch('/api/config')
+    if (configResponse.ok) {
+      const config = await configResponse.json()
+      buildingChoices.value = config.building_choices || []
+      buildingLabels.value = Object.fromEntries(buildingChoices.value.map(c => [c.id, c.label]))
+      contactConfigured.value = config.contact_configured !== false
+    }
+    const planResponse = await fetch('/api/stats/admin/plan', {
+      headers: { 'Authorization': `Bearer ${authToken.value}` }
+    })
+    if (planResponse.ok) {
+      parkingPlan.value = await planResponse.json()
+    }
+  } catch (err) {
+    spots.value = null
+  }
+}
+
+/** Spots of the lots whose retained answer is "oui" (conflicts excluded until settled). */
+const interestedSpots = computed(() =>
+  (spots.value?.interested_lots || []).flatMap(l => l.places)
+)
+
+/** Reload figures after a conflict action or a paper entry */
+const refreshAfterChange = () => {
+  loadStats()
+  conflictsPanel.value?.load()
+}
+
 const exportCSV = async () => {
+  exportNotice.value = ''
   try {
     const response = await fetch('/api/stats/export', {
       headers: { 'Authorization': `Bearer ${authToken.value}` }
@@ -105,15 +169,14 @@ const exportCSV = async () => {
       a.click()
       URL.revokeObjectURL(url)
     } else if (response.status === 404) {
-      alert('Export indisponible. Vérifiez que le backend tourne sur le port 3000.')
+      exportNotice.value = 'Export indisponible. Vérifiez que le backend tourne.'
     } else if (response.status === 401) {
-      alert('Session expirée. Veuillez vous reconnecter.')
       logout()
     } else {
-      alert('Erreur lors de l\'export')
+      exportNotice.value = 'Erreur lors de l\'export'
     }
   } catch (err) {
-    alert('Erreur lors de l\'export. Le backend est-il démarré (port 3000) ?')
+    exportNotice.value = 'Erreur lors de l\'export. Le backend est-il démarré ?'
   }
 }
 
@@ -152,7 +215,8 @@ const evLabels = {
 
 const statusLabels = {
   'proprietaire': 'Propriétaire',
-  'locataire': 'Locataire'
+  'locataire': 'Locataire',
+  'non_renseigne': 'Non renseigné'
 }
 
 const solutionLabels = {
@@ -254,7 +318,14 @@ onMounted(() => {
         </div>
       </header>
 
-      <div v-if="loading" class="loading">
+      <div v-if="!contactConfigured" class="config-warning" role="alert">
+        <strong>Adresse de contact non configurée.</strong>
+        Renseignez l'e-mail du conseil syndical dans « Réglages du site » ci-dessous (ou <code>CONTACT_EMAIL</code>
+        dans l'environnement) : en attendant, aucune adresse n'est affichée aux répondants.
+      </div>
+      <p v-if="exportNotice" class="form-error">{{ exportNotice }}</p>
+
+      <div v-if="loading && !stats" class="loading">
         <p>Chargement des statistiques...</p>
       </div>
 
@@ -275,10 +346,25 @@ onMounted(() => {
             <div class="metric-label">Participation</div>
             <div class="metric-detail">sur {{ stats.total_lots }} lots</div>
           </div>
+          <div v-if="stats.parking_spots" class="metric-card primary">
+            <div class="metric-value">{{ stats.declared_spots }}<small> / {{ stats.parking_spots }}</small></div>
+            <div class="metric-label">Places déclarées</div>
+            <div class="metric-detail">{{ stats.no_parking || 0 }} « pas de place » · {{ stats.express_responses || 0 }} express · {{ stats.paper_responses || 0 }} papier</div>
+          </div>
+          <div v-if="stats.declared_lots !== null && stats.declared_lots !== undefined" class="metric-card primary">
+            <div class="metric-value">{{ stats.declared_lots }}<small> / {{ stats.total_lots }}</small></div>
+            <div class="metric-label">Lots déclarés</div>
+            <div class="metric-detail">un lot double compte une fois</div>
+          </div>
+          <div class="metric-card" :class="{ warning: stats.conflict_lots }">
+            <div class="metric-value">{{ stats.conflict_lots || 0 }}</div>
+            <div class="metric-label">Lots en conflit</div>
+            <div class="metric-detail">{{ stats.suspect_responses || 0 }} suspecte(s) · {{ stats.ignored_responses || 0 }} ignorée(s)</div>
+          </div>
           <div class="metric-card success">
             <div class="metric-value">{{ (stats.interest?.oui || 0) + (stats.interest?.['peut-etre'] || 0) }}</div>
             <div class="metric-label">Intéressés</div>
-            <div class="metric-detail">oui + peut-être</div>
+            <div class="metric-detail">oui + peut-être · {{ stats.interested_lots_count || 0 }} lot(s) « oui »</div>
           </div>
           <div class="metric-card info">
             <div class="metric-value">{{ (stats.has_ev?.oui || 0) + (stats.has_ev?.projet || 0) }}</div>
@@ -363,7 +449,7 @@ onMounted(() => {
                 :key="item.key"
                 class="bar-item"
               >
-                <div class="bar-label">Bât. {{ item.key }}</div>
+                <div class="bar-label">{{ item.key === 'non_renseigne' ? 'Non renseigné' : (buildingLabels[item.key] || 'Bât. ' + item.key) }}</div>
                 <div class="bar-wrapper">
                   <div
                     class="bar-fill"
@@ -424,6 +510,71 @@ onMounted(() => {
             </div>
           </div>
         </div>
+
+        <!-- Declared parking spots (sorted) -->
+        <section v-if="spots && (spots.parking_spots || spots.spots.length || spots.unrecognized.length)" class="spots-section">
+          <h3>Places déclarées</h3>
+          <p v-if="interestedSpots.length" class="spots-summary">
+            <strong>Places intéressées (oui) :</strong> {{ interestedSpots.join(', ') }}
+          </p>
+          <p v-if="spots.interested_lots?.length" class="spots-summary">
+            <strong>Lots intéressés ({{ spots.interested_lots.length }}) :</strong>
+            {{ spots.interested_lots.map(l => `n°${l.lot} (${l.places.join('-')})`).join(', ') }}
+          </p>
+          <p v-if="interestedSpots.length || spots.interested_lots?.length" class="spots-note">
+            Usage interne : ces listes ne sont transmises à personne (syndic, Enedis, opérateurs).
+            Seuls des totaux sont communiqués, comme l'indique la notice.
+          </p>
+          <ParkingPlan
+            v-if="spots.parking_spots"
+            :parking-spots="spots.parking_spots"
+            :spots="spots.spots"
+            :plan="parkingPlan?.plan || null"
+            :lots="parkingPlan?.lots || []"
+            class="spots-plan"
+          />
+          <div v-if="spots.spots.length" class="spots-table-wrapper">
+            <table class="spots-table">
+              <thead>
+                <tr>
+                  <th>Place</th>
+                  <th>Intéressé</th>
+                  <th>VE</th>
+                  <th>Statut</th>
+                  <th>Réponse</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-for="item in spots.spots" :key="item.spot">
+                  <tr
+                    v-for="(r, i) in item.responses"
+                    :key="item.spot + '-' + r.id"
+                    :class="{ conflict: item.conflict, dimmed: !r.retained && !item.conflict && item.responses.length > 1 }"
+                  >
+                    <td>{{ i === 0 ? item.spot : '' }}</td>
+                    <td :class="'interest-' + r.interested">{{ interestLabels[r.interested] || r.interested }}</td>
+                    <td>{{ evLabels[r.has_ev] || r.has_ev }}</td>
+                    <td>{{ statusLabels[r.status] || r.status }}</td>
+                    <td>#{{ r.id }}<span v-if="r.source === 'papier'"> · papier</span><span v-if="r.verification === 'verifiee'"> · code ✓</span><span v-if="r.review_status === 'suspect'"> · suspecte</span></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+          <p v-if="spots.spots.some(s => s.conflict)" class="spots-note">
+            Les lignes surlignées signalent un lot en conflit (plusieurs réponses) : à trancher dans la section « Conflits ».
+          </p>
+          <p v-if="spots.unrecognized.length" class="spots-note">
+            Numéros non reconnus :
+            <span v-for="u in spots.unrecognized" :key="u.id">« {{ u.value }} » (#{{ u.id }}) </span>
+          </p>
+        </section>
+
+        <AdminSettings :token="authToken" @saved="loadSpots" @unauthorized="logout" />
+        <AdminConflicts ref="conflictsPanel" :token="authToken" @changed="loadStats" @unauthorized="logout" />
+        <AdminPaperEntry :token="authToken" :building-choices="buildingChoices" @saved="refreshAfterChange" @unauthorized="logout" />
+        <AdminCodes :token="authToken" @unauthorized="logout" />
+        <AdminRights :token="authToken" @changed="refreshAfterChange" @unauthorized="logout" />
 
         <!-- Additional stats (only show section and items with > 0 respondents) -->
         <section
@@ -550,7 +701,7 @@ onMounted(() => {
 
 @media (min-width: 768px) {
   .metrics-row {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   }
 }
 
@@ -722,6 +873,80 @@ onMounted(() => {
 
 .donut-value {
   font-weight: 600;
+}
+
+/* Declared spots */
+.spots-section {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.spots-section h3 {
+  margin-bottom: 0.75rem;
+}
+
+.spots-plan {
+  margin: 1rem 0 1.5rem;
+}
+
+.spots-summary {
+  margin-bottom: 1rem;
+  color: var(--color-text-light);
+}
+
+.spots-table-wrapper {
+  overflow-x: auto;
+}
+
+.spots-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.spots-table th,
+.spots-table td {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.spots-table td:first-child {
+  font-weight: 700;
+}
+
+.spots-table tr.conflict {
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.spots-table tr.dimmed {
+  opacity: 0.6;
+}
+
+.metric-card.warning {
+  border-color: var(--color-warning);
+}
+
+.config-warning {
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 2px solid var(--color-warning);
+  border-radius: var(--radius);
+  background: var(--color-bg-card);
+}
+
+.spots-table .interest-oui {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.spots-note {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
 }
 
 /* Additional stats */

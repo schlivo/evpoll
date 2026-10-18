@@ -1,103 +1,70 @@
 <script setup>
-const currentYear = new Date().getFullYear()
+// Simple page footer: copro address, parking access, instance footer text.
+import { inject, ref } from 'vue'
+
+const instanceConfig = inject('instanceConfig', ref({}))
+const openPrivacy = inject('openPrivacy', () => {})
 </script>
 
 <template>
   <footer class="footer">
-    <div class="container">
-      <div class="footer-content">
-        <div class="footer-info">
-          <p class="footer-title">Enquête IRVE Copropriété</p>
-          <p class="footer-desc">
-            Projet d'installation de bornes de recharge pour véhicules électriques
-          </p>
-        </div>
-
-        <div class="footer-links">
-          <router-link to="/faq">FAQ</router-link>
-          <span class="separator">|</span>
-          <a href="#rgpd" @click.prevent="$emit('openRgpd')">Mentions RGPD</a>
-        </div>
-      </div>
-
-      <div class="footer-bottom">
-        <p>&copy; {{ currentYear }} - Copropriété. Tous droits réservés.</p>
-        <p class="footer-note">
-          Données hébergées en France.
-          Aucune donnée transmise à des tiers.
-        </p>
-      </div>
+    <div class="footer-inner">
+      <p v-if="instanceConfig.copro_name || instanceConfig.copro_address">
+        <strong v-if="instanceConfig.copro_name">{{ instanceConfig.copro_name }}</strong>
+        <template v-if="instanceConfig.copro_name && instanceConfig.copro_address"> – </template>
+        {{ instanceConfig.copro_address }}
+      </p>
+      <p v-if="instanceConfig.parking_address">Parking : {{ instanceConfig.parking_address }}</p>
+      <p v-if="instanceConfig.texts?.footer">{{ instanceConfig.texts.footer }}</p>
+      <p class="footer-links">
+        <button type="button" class="footer-link" @click="openPrivacy">Mentions légales et confidentialité</button>
+      </p>
     </div>
   </footer>
 </template>
 
 <style scoped>
 .footer {
-  background: var(--color-bg-alt);
-  border-top: 1px solid var(--color-border);
-  padding: 2rem 0;
-  margin-top: auto;
+  border-top: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: 1rem;
 }
 
-.footer-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
+.footer-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 1.75rem 1rem 2.5rem;
+  padding-bottom: max(2.5rem, env(safe-area-inset-bottom));
 }
 
-.footer-title {
-  font-weight: 600;
-  color: var(--color-text);
+@media (min-width: 768px) {
+  .footer-inner { padding: 2rem 2.5rem 3rem; }
+}
+
+.footer p {
   margin: 0 0 0.25rem;
 }
 
-.footer-desc {
-  color: var(--color-text-light);
-  margin: 0;
-  font-size: 0.875rem;
+.footer strong {
+  color: var(--ink);
 }
 
 .footer-links {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
+  margin-top: 0.75rem !important;
 }
 
-.footer-links a {
-  color: var(--color-text-light);
-  font-size: 0.875rem;
+.footer-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
 }
 
-.footer-links a:hover {
-  color: var(--color-primary);
-}
-
-.separator {
-  color: var(--color-border);
-}
-
-.footer-bottom {
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--color-border);
-  text-align: center;
-}
-
-.footer-bottom p {
-  margin: 0;
-  font-size: 0.875rem;
-  color: var(--color-text-muted);
-}
-
-.footer-note {
-  margin-top: 0.5rem !important;
-}
-
-@media (min-width: 640px) {
-  .footer-content {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: flex-start;
-  }
+.footer-link:hover {
+  color: var(--rose);
 }
 </style>

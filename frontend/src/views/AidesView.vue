@@ -1,29 +1,26 @@
-<script setup>
-import SvgIcon from '../components/SvgIcon.vue'
-</script>
-
 <template>
-  <div class="page">
-    <div class="container">
-      <header class="page-header">
-        <h1>Comment ça se finance ?</h1>
+  <div class="info-view">
+      <header class="info-intro">
         <p>
-          Avec la solution colonne horizontale Enedis, le coût pour la copropriété
-          est nul. Seuls les utilisateurs payent, et ils bénéficient d'aides.
+          Avec l'infrastructure collective préfinancée par Enedis, la copropriété
+          n'investit pas dans l'infrastructure. Seuls les utilisateurs payent leur raccordement et leur borne,
+          et ils peuvent bénéficier d'aides.
         </p>
       </header>
 
       <section class="main-principle">
         <div class="principle-card">
-          <div class="principle-icon enedis-logo">
-              <SvgIcon name="enedis" :size="48" />
-            </div>
           <div class="principle-content">
-            <h2>Enedis préfinance l'infrastructure</h2>
+            <h4>Enedis préfinance l'infrastructure</h4>
             <p>
               Enedis installe la <strong>colonne horizontale</strong> (le câblage principal
               dans le parking) sans aucun investissement de la copropriété.
-              Pas de vote de budget en AG, pas d'avance de trésorerie.
+              Pas d'investissement pour la copropriété, mais un vote en AG (majorité simple)
+              pour signer la convention avec Enedis.
+            </p>
+            <p>
+              D'éventuels frais annexes (honoraires de suivi, adaptation du local électrique)
+              seront chiffrés avant l'AG.
             </p>
             <p>
               Chaque copropriétaire qui souhaite une borne obtient son propre
@@ -35,35 +32,55 @@ import SvgIcon from '../components/SvgIcon.vue'
       </section>
 
       <section class="cost-section">
-        <h2>Ce que paye chaque utilisateur</h2>
+        <h4>Ce que paye chaque utilisateur</h4>
 
         <div class="cost-grid">
           <div class="cost-card">
             <div class="cost-header">
               <span class="cost-label">Quote-part Enedis</span>
-              <span class="cost-amount">440 à 2 200 euros</span>
+              <span class="cost-amount">456 à 2 267 € TTC</span>
             </div>
             <div class="cost-content">
               <p>
-                Participation au remboursement de l'infrastructure sur 20 ans.
-                Le montant dépend de la distance de votre place au point de raccordement.
+                Contribution au préfinancement de l'infrastructure, encadrée par Enedis
+                (plancher et plafond 2026), <strong>versée une fois</strong>, au raccordement.
+                Le montant dépend du coût du projet et de la puissance demandée pour la place.
+                La convention entre la copropriété et Enedis est conclue pour 20 ans.
               </p>
               <div class="cost-highlight">
-                <strong>Avantage premiers demandeurs :</strong> le coût est plus
-                avantageux si vous vous raccordez dès l'installation de la colonne.
+                <strong>Se déclarer tôt :</strong> la prime ADVENIR peut réduire cette quote-part
+                si la dérivation individuelle est demandée dès la création de l'infrastructure.
               </div>
             </div>
           </div>
 
           <div class="cost-card">
             <div class="cost-header">
-              <span class="cost-label">Borne de recharge</span>
-              <span class="cost-amount">800 à 1 500 euros</span>
+              <span class="cost-label">Dérivation individuelle</span>
+              <span class="cost-amount">~310 € TTC</span>
             </div>
             <div class="cost-content">
               <p>
-                Achat et installation de votre borne individuelle (7 kW typiquement).
-                Vous êtes propriétaire de votre équipement.
+                Câble entre l'infrastructure et votre place, et compteur Linky.
+                Ordre de grandeur selon le barème Enedis 2025 : environ 310 € TTC si elle est demandée
+                avec les travaux, environ 389 € TTC si elle est demandée après.
+              </p>
+              <p>
+                Ce frais est distinct de la quote-part : les deux s'additionnent.
+              </p>
+            </div>
+          </div>
+
+          <div class="cost-card">
+            <div class="cost-header">
+              <span class="cost-label">Borne de recharge</span>
+              <span class="cost-amount">Sur devis</span>
+            </div>
+            <div class="cost-content">
+              <p>
+                Achat et pose de votre borne individuelle (7 kW typiquement) par un installateur
+                qualifié IRVE. Vous êtes propriétaire de votre équipement.
+                Le prix varie selon le matériel et l'installateur.
               </p>
             </div>
           </div>
@@ -71,111 +88,133 @@ import SvgIcon from '../components/SvgIcon.vue'
       </section>
 
       <section class="aids-section">
-        <h2>Les aides pour réduire votre coût</h2>
+        <h4>Les aides pour réduire votre coût</h4>
 
         <div class="aids-grid">
           <div class="aid-card featured">
-            <div class="aid-badge">Jusqu'à 600 euros</div>
-            <h3>Prime ADVENIR</h3>
+            <div class="aid-badge">Jusqu'à 1 000 € HT</div>
+            <h5>Prime ADVENIR : borne individuelle</h5>
             <p>
-              Le programme ADVENIR finance <strong>50% du coût de votre borne</strong>,
-              plafonné à 600 euros HT. L'installateur déduit directement la prime du devis.
+              Le programme ADVENIR finance <strong>50 % du coût HT de votre borne</strong>,
+              plafonné à 1 000 € HT par point individuel depuis le 1<sup>er</sup> avril 2026.
+              L'installateur déduit généralement la prime du devis.
             </p>
             <ul>
               <li>Installateur qualifié IRVE et partenaire ADVENIR</li>
-              <li>Borne ≤ 22 kW</li>
-              <li>Programme valable jusqu'en 2027</li>
+              <li>Offre de prime signée <strong>avant</strong> les travaux</li>
+              <li>Programme prévu jusqu'au 31 décembre 2027</li>
             </ul>
           </div>
 
           <div class="aid-card">
-            <div class="aid-badge secondary">5,5%</div>
-            <h3>TVA réduite</h3>
+            <div class="aid-badge secondary">Jusqu'à 12 500 € HT</div>
+            <h5>Prime ADVENIR : infrastructure collective</h5>
             <p>
-              Taux de TVA à 5,5% au lieu de 20% sur l'installation
-              (logement de plus de 2 ans).
+              Pour les travaux en parties communes : 50 % du coût HT, plafonné à 12 500 € HT
+              jusqu'à 100 places, si l'assemblée générale vote à partir du 1<sup>er</sup> avril 2026.
             </p>
           </div>
+
+          <div class="aid-card">
+            <div class="aid-badge secondary">Selon devis</div>
+            <h5>TVA réduite</h5>
+            <p>
+              TVA réduite possible sur la fourniture et la pose d'une borne,
+              <strong>sous conditions, à confirmer sur le devis</strong>.
+            </p>
+          </div>
+
         </div>
       </section>
 
       <section class="example-section">
-        <h2>Exemple concret</h2>
+        <h4>Exemple : les postes de coût</h4>
         <div class="example-card">
           <p class="example-intro">
-            Pour un copropriétaire qui se raccorde dès l'installation de la colonne :
+            Pour un copropriétaire qui se déclare avant les travaux, avec une borne
+            à 1 200 € HT (hypothèse de calcul, à remplacer par votre devis). Chaque ligne est
+            un ordre de grandeur ; ce tableau ne constitue pas un prix.
           </p>
           <div class="example-table">
             <div class="example-row">
-              <span>Quote-part Enedis (estimation basse)</span>
-              <span class="amount">500 euros</span>
+              <span>Quote-part Enedis (ordre de grandeur, 2026)</span>
+              <span class="amount">456 à 2 267 € TTC</span>
             </div>
             <div class="example-row">
-              <span>Borne 7 kW + installation</span>
-              <span class="amount">1 200 euros HT</span>
+              <span>Dérivation individuelle avec les travaux (ordre de grandeur)</span>
+              <span class="amount">~310 € TTC</span>
+            </div>
+            <div class="example-row">
+              <span>Borne 7 kW + pose (hypothèse, ordre de grandeur)</span>
+              <span class="amount">~1 200 € HT</span>
+            </div>
+            <div class="example-row">
+              <span>TVA sur la borne</span>
+              <span class="amount">Selon devis</span>
             </div>
             <div class="example-row aid">
-              <span>Prime ADVENIR (50%)</span>
-              <span class="amount">- 600 euros</span>
-            </div>
-            <div class="example-row">
-              <span>TVA 5,5%</span>
-              <span class="amount">+ 60 euros</span>
-            </div>
-            <div class="example-row total">
-              <span>Coût total estimé</span>
-              <span class="amount">~1 160 euros</span>
+              <span>Prime ADVENIR : 50 % × 1 200 € HT, sous le plafond de 1 000 € HT (offre signée avant les travaux)</span>
+              <span class="amount">~ - 600 €</span>
             </div>
           </div>
           <p class="example-note">
-            * Estimation indicative. Le montant exact de la quote-part Enedis
-            dépend de la configuration du parking.
+            * Ordres de grandeur, hors coffret ou attestation de conformité éventuels.
+            La quote-part réelle dépend du projet ; elle peut être réduite par ADVENIR.
+            Seul le devis fait foi.
           </p>
         </div>
       </section>
 
       <section class="why-section">
-        <h2>Pourquoi répondre à l'enquête ?</h2>
+        <h4>Pourquoi répondre à l'enquête ?</h4>
         <div class="why-card">
-          <div class="why-icon">
-              <SvgIcon name="chart-up" :size="40" />
-            </div>
           <div class="why-content">
             <p>
-              <strong>Plus on est nombreux intéressés, plus le projet avance vite.</strong>
+              <strong>Des chiffres réels pour décider en AG.</strong>
             </p>
             <p>
-              Enedis et les installateurs priorisent les copropriétés avec un nombre
-              suffisant de demandeurs. Même si vous n'avez pas encore de véhicule électrique,
-              votre intérêt compte pour déclencher le projet.
+              Vos réponses servent à dimensionner le projet, à le présenter en AG avec des chiffres
+              réels et à obtenir de meilleures offres des opérateurs. Même si vous n'avez pas encore
+              de véhicule électrique, votre intérêt compte.
             </p>
           </div>
         </div>
       </section>
 
       <section class="sources-section">
-        <h3>Sources et liens utiles</h3>
+        <h5>Sources et liens utiles</h5>
         <ul class="sources-list">
           <li>
-            <span class="source-favicon source-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-            </span>
             <a href="https://advenir.mobi/" target="_blank" rel="noopener">
               Programme ADVENIR officiel
             </a>
             <span class="source-desc">Primes et conditions d'éligibilité</span>
           </li>
           <li>
-            <span class="source-favicon source-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            </span>
-            <a href="https://www.electro-mob.com/borne-recharge-copropriete-colonne-horizontale-enedis" target="_blank" rel="noopener">
-              Electro-Mob
+            <a href="https://www.isiohm.fr/prime-advenir" target="_blank" rel="noopener">
+              Isiohm : barèmes ADVENIR avril 2026
             </a>
-            <span class="source-desc">Explication détaillée du dispositif</span>
+            <span class="source-desc">Plafonds borne individuelle et infrastructure collective</span>
           </li>
           <li>
-            <SvgIcon name="enedis" :size="20" class="source-favicon enedis-logo" />
+            <a href="https://www.electro-mob.com/colonne-horizontale-enedis-borne-recharge" target="_blank" rel="noopener">
+              Electro-Mob
+            </a>
+            <span class="source-desc">Colonne horizontale Enedis et quote-part 2026</span>
+          </li>
+          <li>
+            <a href="https://isiohm.fr/aides/" target="_blank" rel="noopener">
+              Isiohm : aides 2026
+            </a>
+            <span class="source-desc">Aides en vigueur en 2026</span>
+          </li>
+          <li>
+            <a href="https://www.enedis.fr/reseau-electrique-auto-prefinancement" target="_blank" rel="noopener">
+              Enedis : préfinancement
+            </a>
+            <span class="source-desc">Quote-part 2026 et dérivation individuelle (barème 2025)</span>
+          </li>
+          <li>
             <a href="https://www.enedis.fr/presse/le-reseau-electrique-auto-la-solution-enedis-en-faveur-de-la-mobilite-electrique-dans-les" target="_blank" rel="noopener">
               Enedis
             </a>
@@ -184,291 +223,150 @@ import SvgIcon from '../components/SvgIcon.vue'
         </ul>
       </section>
 
-    </div>
   </div>
 </template>
 
 <style scoped>
-.main-principle {
-  margin-bottom: 3rem;
+.info-intro p {
+  margin: 0 0 1.5rem;
+  color: var(--muted);
 }
 
-.principle-card {
-  display: flex;
-  gap: 1.5rem;
-  padding: 2rem;
-  background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-bg) 100%);
-  border: 2px solid var(--color-primary);
-  border-radius: var(--radius-lg);
+.main-principle,
+.cost-section,
+.aids-section,
+.example-section,
+.why-section {
+  margin-bottom: 2.25rem;
 }
 
-.principle-icon {
-  color: var(--color-primary);
-  flex-shrink: 0;
-  display: flex;
-  align-items: flex-start;
-  min-height: 48px;
-  overflow: visible;
+h4 {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--rule);
 }
 
-.principle-content h2 {
+h5 {
+  font-size: 1.1875rem;
+  margin-bottom: 0.5rem;
+}
+
+p {
   margin: 0 0 1rem;
-  color: var(--color-primary-dark);
 }
 
-.principle-content p {
-  margin: 0 0 1rem;
-  color: var(--color-text);
-  line-height: 1.6;
+.principle-card,
+.why-card {
+  border-left: 3px solid var(--ink);
+  padding: 0.25rem 0 0.25rem 1rem;
 }
 
-.principle-content p:last-child {
+.principle-content p:last-child,
+.why-content p:last-child,
+.cost-content p:last-child {
   margin-bottom: 0;
 }
 
-@media (max-width: 640px) {
-  .principle-card {
-    flex-direction: column;
-    text-align: center;
-  }
-}
-
-.cost-section {
-  margin-bottom: 3rem;
-}
-
-.cost-section h2 {
-  margin-bottom: 1.5rem;
-}
-
-.cost-grid {
+.cost-grid,
+.aids-grid {
   display: grid;
-  gap: 1.5rem;
+  gap: 0 2rem;
 }
 
 @media (min-width: 768px) {
-  .cost-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  .cost-grid { grid-template-columns: repeat(3, 1fr); }
+  .aids-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
-.cost-card {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
+.cost-card,
+.aid-card {
+  border-top: 1px solid var(--ink);
+  padding: 0.75rem 0 1.25rem;
 }
 
 .cost-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 1.25rem;
-  background: var(--color-bg-alt);
-  border-bottom: 1px solid var(--color-border);
+  flex-direction: column;
+  margin-bottom: 0.5rem;
 }
 
 .cost-label {
-  font-weight: 600;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 1.1875rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .cost-amount {
   font-weight: 700;
-  color: var(--color-primary);
-}
-
-.cost-content {
-  padding: 1.25rem;
-}
-
-.cost-content p {
-  margin: 0 0 1rem;
-  color: var(--color-text-light);
-  font-size: 0.95rem;
-  line-height: 1.6;
 }
 
 .cost-highlight {
-  background: var(--color-primary-light);
-  padding: 1rem;
-  border-radius: var(--radius);
-  font-size: 0.9rem;
-  color: var(--color-primary-dark);
-}
-
-.aids-section {
-  margin-bottom: 3rem;
-}
-
-.aids-section h2 {
-  margin-bottom: 1.5rem;
-}
-
-.aids-grid {
-  display: grid;
-  gap: 1.5rem;
-}
-
-@media (min-width: 768px) {
-  .aids-grid {
-    grid-template-columns: 2fr 1fr;
-  }
-}
-
-.aid-card {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-}
-
-.aid-card.featured {
-  border-color: var(--color-primary);
+  border-left: 3px solid var(--signal);
+  padding-left: 0.75rem;
 }
 
 .aid-badge {
   display: inline-block;
-  background: var(--color-primary);
-  color: white;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.25rem 0.75rem;
-  border-radius: 999px;
-  margin-bottom: 0.75rem;
-}
-
-.aid-badge.secondary {
-  background: var(--color-secondary);
-}
-
-.aid-card h3 {
-  margin: 0 0 0.75rem;
-}
-
-.aid-card p {
-  margin: 0 0 1rem;
-  color: var(--color-text-light);
-  font-size: 0.95rem;
-  line-height: 1.6;
+  margin-bottom: 0.5rem;
+  padding: 0 0.45rem;
+  border: 1px solid var(--ink);
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 0.9375rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .aid-card ul {
   margin: 0;
   padding-left: 1.25rem;
-  color: var(--color-text-muted);
-  font-size: 0.875rem;
+  color: var(--muted);
 }
 
 .aid-card li {
   margin-bottom: 0.25rem;
 }
 
-.example-section {
-  margin-bottom: 3rem;
-}
-
-.example-section h2 {
-  margin-bottom: 1rem;
-}
-
-.example-card {
-  background: var(--color-bg-alt);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-}
-
 .example-intro {
-  margin-bottom: 1rem;
-  color: var(--color-text);
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .example-table {
-  background: var(--color-bg-card);
-  border-radius: var(--radius);
-  overflow: hidden;
-  margin-bottom: 1rem;
+  border-top: 2px solid var(--ink);
+  margin-bottom: 0.75rem;
 }
 
 .example-row {
   display: flex;
   justify-content: space-between;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--color-border);
-  font-size: 0.95rem;
-}
-
-.example-row:last-child {
-  border-bottom: none;
-}
-
-.example-row.aid {
-  color: var(--color-success);
-}
-
-.example-row.total {
-  background: var(--color-primary);
-  color: white;
-  font-weight: 600;
+  gap: 1rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--rule);
 }
 
 .example-row .amount {
-  font-weight: 600;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.example-row.aid span:first-child {
+  font-style: italic;
 }
 
 .example-note {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
+  font-size: 0.9375rem;
+  color: var(--muted);
   font-style: italic;
   margin: 0;
 }
 
-.why-section {
-  margin-bottom: 2rem;
-}
-
-.why-section h2 {
-  margin-bottom: 1rem;
-}
-
-.why-card {
-  display: flex;
-  gap: 1rem;
-  padding: 1.5rem;
-  background: var(--color-bg-alt);
-  border-left: 4px solid var(--color-warning);
-  border-radius: 0 var(--radius) var(--radius) 0;
-}
-
-.why-icon {
-  color: var(--color-warning);
-  flex-shrink: 0;
-  display: flex;
-  align-items: flex-start;
-}
-
-.why-content p {
-  margin: 0 0 0.75rem;
-  color: var(--color-text);
-  line-height: 1.6;
-}
-
-.why-content p:last-child {
-  margin-bottom: 0;
-  color: var(--color-text-light);
-}
-
 .sources-section {
-  margin-top: 3rem;
-  padding-top: 2rem;
-  border-top: 1px solid var(--color-border);
-}
-
-.sources-section h3 {
-  font-size: 1rem;
-  margin-bottom: 1rem;
-  color: var(--color-text-muted);
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
 }
 
 .sources-list {
@@ -478,50 +376,12 @@ import SvgIcon from '../components/SvgIcon.vue'
 }
 
 .sources-list li {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  font-size: 0.9rem;
-}
-
-.source-favicon {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  border-radius: 3px;
-}
-
-.source-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-primary);
-}
-
-.source-icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-.enedis-logo {
-  color: var(--color-enedis, #0066b3);
+  margin-bottom: 0.6rem;
 }
 
 .source-desc {
-  width: 100%;
-  margin-left: 28px;
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-}
-
-.sources-list a {
-  color: var(--color-primary);
-  text-decoration: none;
-}
-
-.sources-list a:hover {
-  text-decoration: underline;
+  display: block;
+  font-size: 1rem;
+  color: var(--muted);
 }
 </style>
