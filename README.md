@@ -85,7 +85,7 @@ Testez l'application sur notre instance de démonstration :
 | Composant | Technologie |
 |-----------|-------------|
 | Frontend | Vue 3 (Composition API) + Vite 7 |
-| Backend | Node.js 20+ / Express 4 |
+| Backend | Node.js 22 / Express 4 |
 | Base de données | SQLite (better-sqlite3) |
 | Sécurité | Helmet, bcrypt, express-rate-limit |
 | Déploiement | Docker / Node.js natif |
@@ -119,8 +119,8 @@ enquete-irve/
 ## Installation
 
 ### Prérequis
+
 - **Node.js 22** (même version que la prod ; better-sqlite3 11 ne compile pas sous Node 25+)
-- **Node.js 20+** (LTS recommandé)
 - **pnpm** (`corepack enable`, ou `brew install pnpm`) : la version est fixée par `packageManager` dans package.json
 - **Git**
 
@@ -260,9 +260,12 @@ Cette méthode fonctionne sur tout VPS Linux (Ubuntu, Debian, etc.).
 # Mettre à jour le système
 sudo apt update && sudo apt upgrade -y
 
-# Installer Node.js 20
+# Installer Node.js 22
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt install -y nodejs
+
+# Activer pnpm (fourni avec Node via corepack ; version fixée par package.json)
+sudo corepack enable pnpm
 
 # Installer PM2 (gestionnaire de processus)
 sudo npm install -g pm2
@@ -281,8 +284,8 @@ sudo chown -R $USER:$USER enquete-irve
 cd enquete-irve
 
 # Installer les dépendances
-cd backend && npm install --production
-cd ../frontend && npm install && npm run build
+cd backend && pnpm install --frozen-lockfile --prod
+cd ../frontend && pnpm install --frozen-lockfile && pnpm run build
 
 # Copier le build frontend dans le backend
 cp -r dist ../backend/public
@@ -595,8 +598,10 @@ cd /var/www/enquete-irve
 git pull
 
 # Mettre à jour les dépendances
-cd backend && npm install --production
-cd ../frontend && npm install && npm run build
+# (première mise à jour après le passage à pnpm : supprimer d'abord
+#  backend/node_modules et frontend/node_modules, créés par npm)
+cd backend && pnpm install --frozen-lockfile --prod
+cd ../frontend && pnpm install --frozen-lockfile && pnpm run build
 cp -r dist ../backend/public
 
 # Redémarrer
@@ -654,7 +659,7 @@ pm2 logs enquete-irve --lines 50
 lsof -i :3000
 
 # Reconstruire les modules natifs
-cd backend && npm rebuild
+cd backend && pnpm rebuild
 ```
 
 ### Erreur de base de données
