@@ -119,9 +119,9 @@ enquete-irve/
 ## Installation
 
 ### Prérequis
-
+- **Node.js 22** (même version que la prod ; better-sqlite3 11 ne compile pas sous Node 25+)
 - **Node.js 20+** (LTS recommandé)
-- **npm** ou **yarn**
+- **pnpm** (`corepack enable`, ou `brew install pnpm`) : la version est fixée par `packageManager` dans package.json
 - **Git**
 
 ### Installation des dépendances
@@ -133,11 +133,11 @@ cd enquete-irve
 
 # Backend
 cd backend
-npm install
+pnpm install
 
 # Frontend
 cd ../frontend
-npm install
+pnpm install
 ```
 
 ### Développement local
@@ -145,14 +145,14 @@ npm install
 **Terminal 1 - Backend :**
 ```bash
 cd backend
-npm run dev
+pnpm run dev
 # → API disponible sur http://localhost:3000
 ```
 
 **Terminal 2 - Frontend :**
 ```bash
 cd frontend
-npm run dev
+pnpm run dev
 # → Application sur http://localhost:5173
 ```
 
