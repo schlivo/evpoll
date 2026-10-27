@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # pnpm comes from corepack, at the version pinned by "packageManager"
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+
+jobs:
+  app:
+    name: Install, build, smoke test, audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - run: corepack enable pnpm
+
+      # --frozen-lockfile also enforces pnpm-workspace.yaml: minimumReleaseAge
+      # and the allowBuilds list for native modules
+      - name: Frontend install and build
+        working-directory: frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+
+      - name: Backend install
+        working-directory: backend
+        run: pnpm install --frozen-lockfile --prod
+
+      - name: Backend smoke test
+        working-directory: backend
+        env:
+          PORT: "3000"
+          HOST: 127.0.0.1
+          NODE_ENV: production
+          DB_PATH: ${{ runner.temp }}/ci.db
+          INSTANCE_DIR: ../instances/demo
+          ADMIN_PASSWORD: ci-only-password
+          IP_HASH_SECRET: ci-only-secret
+        run: |
+          cp -r ../frontend/dist public
+          node src/index.js > "$RUNNER_TEMP/server.log" 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:3000/api/health > /dev/null && break
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:3000/api/health
+          curl -sf -o /dev/null http://127.0.0.1:3000/
+          curl -sf -o /dev/null http://127.0.0.1:3000/api/config
+
+      - name: Server log
+        if: failure()
+        run: cat "$RUNNER_TEMP/server.log" || true
+
+      # Fails on high and critical only
+      - name: Audit
+        run: |
+          (cd backend && pnpm audit --prod --audit-level high)
+          (cd frontend && pnpm audit --audit-level high)
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build
+        run: docker build -t evpoll:ci .
+
+      - name: Run and check health
+        run: |
+          docker run -d --name evpoll -p 3000:3000 \
+            -e ADMIN_PASSWORD=ci-only-password -e IP_HASH_SECRET=ci-only-secret evpoll:ci
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:3000/api/health > /dev/null && break
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:3000/api/health
+          curl -sf -o /dev/null http://127.0.0.1:3000/
+
+      - name: Container log
+        if: failure()
+        run: docker logs evpoll || true
