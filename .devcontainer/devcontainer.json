@@ -39,8 +39,8 @@
     }
   },
 
-  "postCreateCommand": "cd /workspace/backend && rm -rf node_modules && npm install && cd /workspace/frontend && rm -rf node_modules && npm install",
-  "postStartCommand": "cd /workspace/backend && npm run dev & sleep 2 && cd /workspace/frontend && npm run dev",
+  "postCreateCommand": "cd /workspace/backend && rm -rf node_modules && pnpm install && cd /workspace/frontend && rm -rf node_modules && pnpm install",
+  "postStartCommand": "cd /workspace/backend && pnpm run dev & sleep 2 && cd /workspace/frontend && pnpm run dev",
 
   "remoteUser": "node"
 }

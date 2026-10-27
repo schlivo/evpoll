@@ -7,6 +7,10 @@ RUN apt-get update && apt-get install -y \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
+# pnpm (version pinned by "packageManager" in package.json)
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable
+
 # Set working directory
 WORKDIR /workspace
 

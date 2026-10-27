@@ -143,13 +143,16 @@ sudo systemctl restart ssh
 ## Étape 6 : Installer Node.js et les dépendances
 
 ```bash
-# Installer Node.js 20 LTS
+# Installer Node.js 22 LTS
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt install -y nodejs
 
+# Activer pnpm (fourni avec Node via corepack ; version fixée par package.json)
+sudo corepack enable pnpm
+
 # Vérifier l'installation
-node --version  # v20.x.x
-npm --version   # 10.x.x
+node --version  # v22.x.x
+pnpm --version  # 12.x.x (téléchargé par corepack au premier appel dans le projet)
 
 # Installer PM2 (gestionnaire de processus)
 sudo npm install -g pm2
@@ -174,7 +177,7 @@ cd evpoll
 
 # Installer les dépendances backend
 cd backend
-npm install --production
+pnpm install --frozen-lockfile --prod
 
 # Créer le dossier de données
 mkdir -p data
@@ -192,8 +195,8 @@ EOF
 
 # Compiler le frontend
 cd ../frontend
-npm install
-npm run build
+pnpm install --frozen-lockfile
+pnpm run build
 cp -r dist ../backend/public
 
 # Lancer avec PM2
@@ -303,12 +306,14 @@ pm2 status
 
 ### Mise à jour de l'application
 
+Première mise à jour après le passage à pnpm : supprimer d'abord `backend/node_modules` et `frontend/node_modules` (créés par npm).
+
 ```bash
 cd /var/www/evpoll
 git pull
-cd frontend && npm install && npm run build
+cd frontend && pnpm install --frozen-lockfile && pnpm run build
 cp -r dist ../backend/public
-cd ../backend && npm install --production
+cd ../backend && pnpm install --frozen-lockfile --prod
 pm2 restart evpoll
 ```
 
@@ -344,7 +349,7 @@ sudo lsof -i :3000
 
 # Reconstruire les modules natifs (si erreur SQLite)
 cd /var/www/evpoll/backend
-npm rebuild
+pnpm rebuild
 pm2 restart evpoll
 ```
 

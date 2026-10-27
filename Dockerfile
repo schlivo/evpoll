@@ -1,10 +1,12 @@
 # Build frontend
 FROM node:22-alpine AS frontend-build
+# pnpm version comes from "packageManager" in package.json
+RUN corepack enable
 WORKDIR /app/frontend
-COPY frontend/package*.json ./
-RUN npm ci
+COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
 COPY frontend/ ./
-RUN npm run build
+RUN pnpm run build
 
 # Build backend dependencies: better-sqlite3 compiles a native module with
 # node-gyp (python3, make, g++). The toolchain stays in this stage only:
@@ -13,9 +15,12 @@ RUN npm run build
 FROM node:22-bookworm-slim AS backend-build
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends python3 build-essential \
-  && rm -rf /var/lib/apt/lists/*
-COPY backend/package*.json ./
-RUN npm ci --omit=dev
+  && rm -rf /var/lib/apt/lists/* \
+  && corepack enable
+# pnpm-workspace.yaml lists the packages allowed to run install scripts
+# (bcrypt, better-sqlite3)
+COPY backend/package.json backend/pnpm-lock.yaml backend/pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile --prod
 
 # Production: use Debian (glibc) so better-sqlite3 native module works on Swarm nodes
 # Alpine (musl) can cause "fcntl64: symbol not found" on some hosts
