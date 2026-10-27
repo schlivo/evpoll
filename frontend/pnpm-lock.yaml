@@ -184,13 +184,13 @@ importers:
     devDependencies:
       '@vitejs/plugin-vue':
         specifier: ^6.0.3
-        version: 6.0.3(vite@7.3.6)(vue@3.5.44)
+        version: 6.0.3(vite@7.3.7)(vue@3.5.44)
       qrcode-generator:
         specifier: ^1.4.4
         version: 1.4.4
       vite:
-        specifier: ^7.3.1
-        version: 7.3.6
+        specifier: ^7.3.7
+        version: 7.3.7
 
 packages:
 
@@ -631,8 +631,8 @@ packages:
     resolution: {integrity: sha512-j2Zq4NyQYG5XMST4cbs02Ak8iJUdxRM0XI5QyxXuZOzKOINmWurp3smXu3y5wDcJrptwpSjgXHzIQxR0omXljQ==}
     engines: {node: '>=12.0.0'}
 
-  vite@7.3.6:
-    resolution: {integrity: sha512-4XP60spRGjSZFf1qYH+dJIkK2znL3zQfl9KkOV9MkkRR/3Dls0dxaBsQPTloEc5BLXWPL9vsOxopxyKoMmDueg==}
+  vite@7.3.7:
+    resolution: {integrity: sha512-AHEzTORMbi7/7aXp7w7KZ5+DCUdSeLsJz0grY8xHpc9DHdYb0vQu6DqJfm2tOw3gDExNgPgnJTXxM6syYFHaCA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
     peerDependencies:
@@ -867,10 +867,10 @@ snapshots:
 
   '@types/estree@1.0.9': {}
 
-  '@vitejs/plugin-vue@6.0.3(vite@7.3.6)(vue@3.5.44)':
+  '@vitejs/plugin-vue@6.0.3(vite@7.3.7)(vue@3.5.44)':
     dependencies:
       '@rolldown/pluginutils': 1.0.0-beta.53
-      vite: 7.3.6
+      vite: 7.3.7
       vue: 3.5.44
 
   '@vue/compiler-core@3.5.44':
@@ -1028,7 +1028,7 @@ snapshots:
       fdir: 6.5.0(picomatch@4.0.7)
       picomatch: 4.0.7
 
-  vite@7.3.6:
+  vite@7.3.7:
     dependencies:
       esbuild: 0.27.2
       fdir: 6.5.0(picomatch@4.0.7)
