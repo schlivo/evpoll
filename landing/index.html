@@ -102,8 +102,16 @@
     .btn-dark { background: var(--asphalt); color: var(--paint); }
     .btn-outline { border-color: var(--asphalt); color: var(--asphalt); }
 
-    .hero-image { position: relative; }
-    .hero-image img { border: 6px solid var(--paint); border-bottom: 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.35); }
+    .hero-image { position: relative; height: 560px; overflow: hidden; }
+    .hero-image .flyer {
+      position: absolute; left: 0; top: 40px; width: 64%;
+      transform: rotate(-5deg); box-shadow: 0 18px 50px rgba(0,0,0,0.45);
+    }
+    .hero-image .phone {
+      position: absolute; right: 4%; top: 70px; width: 46%;
+      border: 10px solid #121417; border-bottom: 0; border-radius: 34px 34px 0 0;
+      outline: 2px solid rgba(243,240,230,0.18); box-shadow: -18px 0 50px rgba(0,0,0,0.5);
+    }
     .hazard { height: 14px; background: var(--hazard); }
 
     /* Sections */
@@ -143,11 +151,10 @@
     /* Screenshots */
     .shots-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; align-items: start; }
     .shot figure { margin: 0; }
-    .shot img { width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; object-position: center top; border: 3px solid var(--ink); background: var(--place); }
+    .shot img { width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; object-position: center top; border: 3px solid var(--ink); background: var(--place); }
     .shot figcaption { padding-top: 14px; }
     .shot h3 { font-family: var(--display); font-weight: 700; font-size: 1.4rem; text-transform: uppercase; }
     .shot p { color: var(--muted); }
-    .shot img.right { object-position: right top; }
 
     /* Open source */
     .opensource { background: var(--place); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
@@ -175,6 +182,7 @@
     @media (max-width: 968px) {
       .hero .container, .opensource .container { grid-template-columns: 1fr; gap: 40px; }
       .hero-content { padding-bottom: 0; }
+      .hero-image { height: 440px; max-width: 520px; width: 100%; margin: 0 auto; }
       .why-grid, .features-grid, .shots-grid { grid-template-columns: 1fr; }
       .why-card, .why-card + .why-card { padding: 24px 0; border-left: 0; }
       .why-card + .why-card { border-top: 1px solid var(--rule); }
@@ -238,8 +246,10 @@
         </div>
       </div>
       <div class="hero-image">
-        <img src="screenshots/main.png"
-             alt="Page d'accueil d'une enquête EV Poll : plan du parking et participation" width="1280" height="900">
+        <img class="flyer" src="screenshots/hero-flyer.png"
+             alt="Flyer A5 de la campagne, avec QR code" width="634" height="900">
+        <img class="phone" src="screenshots/formulaire-mobile.png"
+             alt="Réponse express sur téléphone : place 15 choisie sur le plan" width="780" height="1688">
       </div>
     </div>
   </header>
@@ -330,17 +340,17 @@
       <div class="shots-grid">
         <div class="shot">
           <figure>
-            <img src="screenshots/formulaire-mobile.png" alt="Réponse express sur mobile : place choisie sur le plan" loading="lazy" width="780" height="1688">
+            <img src="screenshots/plan-public.png" alt="Page de l'enquête : le plan du parking, sans aucune réponse affichée" loading="lazy" width="1200" height="800">
             <figcaption>
-              <h3><span class="lang-fr">Réponse express</span><span class="lang-en">Express answer</span></h3>
-              <p class="lang-fr">Sa place sur le plan, deux questions, envoyé.</p>
-              <p class="lang-en">Your spot on the plan, two questions, sent.</p>
+              <h3><span class="lang-fr">Plan public</span><span class="lang-en">Public plan</span></h3>
+              <p class="lang-fr">Chacun y retrouve sa place. Aucune réponse n'y est affichée.</p>
+              <p class="lang-en">Everyone finds their spot. No answer is ever shown.</p>
             </figcaption>
           </figure>
         </div>
         <div class="shot">
           <figure>
-            <img src="screenshots/admin-dashboard.png" alt="Admin : plan du parking coloré par réponse" loading="lazy" width="1024" height="1280">
+            <img src="screenshots/admin-plan.png" alt="Admin : plan du parking coloré par réponse" loading="lazy" width="984" height="656">
             <figcaption>
               <h3><span class="lang-fr">Suivi admin</span><span class="lang-en">Admin</span></h3>
               <p class="lang-fr">Le plan coloré par réponse, les totaux par entrée.</p>
@@ -350,7 +360,7 @@
         </div>
         <div class="shot">
           <figure>
-            <img src="screenshots/flyer-generator.png" class="right" alt="Documents de campagne : flyer A5 avec QR code et code imprimé" loading="lazy" width="1280" height="900">
+            <img src="screenshots/documents.png" alt="Documents de campagne : générateur et aperçu du flyer A5" loading="lazy" width="1400" height="933">
             <figcaption>
               <h3><span class="lang-fr">Documents</span><span class="lang-en">Documents</span></h3>
               <p class="lang-fr">Prêts à imprimer, avec QR code et code.</p>
