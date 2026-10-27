@@ -1,3 +1,10 @@
 allowBuilds:
   bcrypt: true
   better-sqlite3: true
+
+# Supply-chain cooldown: ignore versions published less than 7 days ago
+# (enforced here so it also applies in Docker and on the servers)
+minimumReleaseAge: 10080
+minimumReleaseAgeExclude:
+  # CVE fix deployed 2026-10-27, published 2026-10-22; drop after 2026-10-29
+  - body-parser@1.20.9

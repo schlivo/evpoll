@@ -1,2 +1,6 @@
 allowBuilds:
   esbuild: true
+
+# Supply-chain cooldown: ignore versions published less than 7 days ago
+# (enforced here so it also applies in Docker and on the servers)
+minimumReleaseAge: 10080
